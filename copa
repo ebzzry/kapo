@@ -9,7 +9,7 @@ USER_SCRIPTRC=$HOME/.${SCRIPT}rc
 BASE_DIR=$HOME/$SCRIPT
 
 OPT_HELP=
-OPT_PROVIDER=VirtualBox
+OPT_PROVIDER=vbox
 
 error () {
   echo -e "\e[0;31m\e[1merror: \e[0;0m$@" >&2
@@ -40,11 +40,9 @@ OPTIONS:
 -h                       Show this help
 -p PROVIDER              Select provider
 
-PROVIDERS: VirtualBox
+PROVIDERS: vbox
 
-VMS: nixos, ubuntu, freebsd
-
-OPS: up, ssh, destroy, halt
+OPS: up, ssh, down, rm
 EOF
   exit 0
 }
@@ -70,7 +68,7 @@ check_binaries () {
 }
 
 check_vagrantfile () {
-  if [[ -f "./Vagrantfile" ]]; then
+  if [[ -f "$PWD/Vagrantfile" ]]; then
       return 0
   else
     return 1
@@ -82,6 +80,8 @@ control_vm () {
   shift
 
   case $op in
+    on|up) vagrant up $@ ;;
+    off|down) vagrant halt $@ ;;
     ssh)
       if [[ "$#" == 0 ]]; then
           vagrant ssh
@@ -89,7 +89,7 @@ control_vm () {
         vagrant ssh -c $@
       fi
       ;;
-    rm)
+    rm|del)
       vagrant destroy
       ;;
     *)
@@ -100,7 +100,7 @@ control_vm () {
 
 load_provider () {
   case $OPT_PROVIDER in
-    VirtualBox)
+    VirtualBox|virtualbox|vbox)
       if ! pgrep VirtualBox > /dev/null 2>&1; then
           VirtualBox &
       fi
@@ -159,8 +159,17 @@ aux_command () {
     kill)
       kill_provider
       ;;
-    ls|list)
-      ls $BASE_DIR
+    lsi|list-installed)
+      if [[ -d $BASE_DIR ]]; then
+          ls -1 $BASE_DIR
+      fi
+      ;;
+    lsa|list-available)
+      for file in $GLOBAL_SCRIPTRC $USER_SCRIPTRC; do
+        if [[ -f $file ]]; then
+            cat $file | sed -e '/#/d' | awk -F = '{print $1}'
+        fi
+      done
       ;;
     *)
       return 0
