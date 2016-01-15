@@ -4,7 +4,7 @@ set -eu
 set -o pipefail
 
 readonly SELF=$(basename "${BASH_SOURCE[0]}")
-readonly GLOBAL_COPARC=/etc/coparc
+readonly SYSTEM_COPARC=/etc/coparc
 readonly USER_COPARC=$HOME/.${SELF}rc
 readonly BASE_DIR=$HOME/$SELF
 
@@ -16,10 +16,22 @@ error () {
   exit 1
 }
 
-read_scriptrc () {
-  [[ -e $GLOBAL_COPARC ]] && source $GLOBAL_COPARC   # base
+warning () {
+  echo -e "\e[0;31mwarning: \e[0;0m$@" >&2
+}
 
-  if [[ -e $USER_COPARC ]]; then
+check_coparc () {
+  if [[ ! -e $SYSTEM_COPARC && ! -e $USER_COPARC ]]; then
+      return 1
+  else
+    return 0
+  fi
+}
+
+read_coparc () {
+  [[ -e $SYSTEM_COPARC ]] && source $SYSTEM_COPARC   # base
+
+  if [[ -e $USER_COPARC ]]; then # overrides
       source $USER_COPARC
   else
     error "No RC files exist. Please create one, then re-run this program."
@@ -28,7 +40,7 @@ read_scriptrc () {
 
 display_usage () {
   cat <<EOF
-$SELF [OPTIONS] <VM> <OP>
+$SELF [OPTIONS] <VM|COMMAND> <OPERATION>
 
 OPTIONS:
 -h                       Show this help
@@ -36,8 +48,18 @@ OPTIONS:
 
 PROVIDERS: vbox
 
-OPS: up, ssh, down, rm
+VM: (please check your .coparc file)
+
+COMMANDS: purge|rm, kill|k, list-installed|li, list-available|la, make-rc|mkrc
+
+OPERATIONS: up, ssh, down, rm
 EOF
+
+  if ! check_coparc; then
+      echo -e "\n"
+      warning "No RC files were found. You may create a default one by running:\n\n$SELF mkrc"
+  fi
+
   exit 0
 }
 
@@ -134,8 +156,46 @@ purge_vms () {
   fi
 }
 
+purge () {
+  if [[ "$#" == 0 ]]; then
+      purge_vms
+  else
+    purge_vm $1
+  fi
+}
+
 kill_provider () {
-  pkill -9 $OPT_PROVIDER
+  if [[ "$#" == 1 ]]; then
+      pkill $1
+  else
+    pkill -9 $OPT_PROVIDER
+  fi
+}
+
+list_installed_vms () {
+  if [[ -d $BASE_DIR ]]; then
+      ls -1 $BASE_DIR
+  fi
+}
+
+list_available_vms () {
+  for file in $SYSTEM_COPARC $USER_COPARC; do
+    if [[ -f $file ]]; then
+        cat $file | sed -e '/#/d' | awk -F = '{print $1}'
+    fi
+  done
+}
+
+make_rc () {
+  if [[ -e $USER_COPARC ]]; then
+      error "An existing RC file is found. Skipping file creation."
+  else
+    cat > $USER_COPARC <<EOF
+nixos=zimbatm/nixos-15.09-x86_64
+ubuntu=ubuntu/wily64
+debian=debian/jessie64
+EOF
+  fi
 }
 
 aux_command () {
@@ -143,27 +203,20 @@ aux_command () {
   shift
 
   case $cmd in
-    purge)
-      if [[ "$#" == 0 ]]; then
-          purge_vms
-      else
-        purge_vm $1
-      fi
+    purge|rm)
+      purge $@
       ;;
-    kp|kill)
-      kill_provider
+    kp|kill|kill-provider)
+      kill_provider $@
       ;;
     li|list-installed)
-      if [[ -d $BASE_DIR ]]; then
-          ls -1 $BASE_DIR
-      fi
+      list_installed_vms
       ;;
     la|list-available)
-      for file in $GLOBAL_COPARC $USER_COPARC; do
-        if [[ -f $file ]]; then
-            cat $file | sed -e '/#/d' | awk -F = '{print $1}'
-        fi
-      done
+      list_available_vms
+      ;;
+    mkrc|make-rc)
+      make_rc
       ;;
     *)
       return 0
@@ -176,7 +229,7 @@ aux_command () {
 get_box () {
   local vm=$1
 
-  read_scriptrc
+  read_coparc
   echo $(eval "echo \$$vm")
 }
 
