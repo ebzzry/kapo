@@ -1,3 +1,11 @@
+# To define more VMs, follow the format
+#
+# vm_name=box_name
+#
+# where vm_name stands for the alias to use with copa
+# and box_name stands for boxes that are found in
+# https://atlas.hashicorp.com/boxes/search
+
 nixos=zimbatm/nixos-15.09-x86_64
 ubuntu=ubuntu/wily64
 freebsd=freebsd/FreeBSD-10.2-RELEASE
