@@ -127,7 +127,7 @@ load_provider () {
   case $OPT_PROVIDER in
     VirtualBox|virtualbox|vbox)
       if ! pgrep VirtualBox > /dev/null 2>&1; then
-          VirtualBox &
+          VirtualBox > /dev/null 2>&1 &
       fi
       ;;
     *)
@@ -235,11 +235,27 @@ aux_command () {
   exit 0
 }
 
-get_box () {
+vm_available () {
   local vm=$1
 
+  if list_available_vms | grep -q $vm; then
+      return 0
+  else
+    return 1
+  fi
+}
+
+get_box () {
+  local vm=$1
+  local box=
+
   read_coparc
-  echo $(eval "echo \$$vm")
+
+  if vm_available $vm; then
+      echo $(eval "echo \$$vm")
+  else
+    echo ""
+  fi
 }
 
 ensure_base_directory () {
