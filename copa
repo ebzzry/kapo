@@ -1,0 +1,161 @@
+#!/usr/bin/env bash
+
+set -eu
+set -o pipefail
+
+SCRIPT=$(basename "${BASH_SOURCE[0]}")
+BASE_DIR=$HOME/$SCRIPT
+
+OPT_FOO=
+OPT_PROVIDER=VirtualBox
+
+error () {
+  echo -e "\e[0;31m\e[1merror: \e[0;0m$@" >&2
+  exit 1
+}
+
+message () {
+  echo -e $@
+}
+
+create_temp_dir () {
+  return 0
+}
+
+ensure_directories () {
+  if [[ ! -d $BASE_DIR ]]; then
+      mkdir -p $BASE_DIR
+  fi
+}
+
+display_usage () {
+  cat <<EOF
+$SCRIPT [options] <VM> <Operation>
+
+Options:
+
+Available VMs:
+
+nixos
+ubuntu
+elcapitan
+yosemite
+
+Available operations:
+
+up
+ssh
+destroy
+down|halt
+EOF
+}
+
+check_binaries () {
+  for i in vagrant VirtualBox pgrep; do
+    if ! type -P $i > /dev/null; then
+        error "The program \e[0;34m\e[1m${i}\e[0;0m is missing. Please install it, then re-run this script."
+    fi
+  done
+}
+
+check_arguments () {
+  if [[ "$#" -lt 2 ]]; then
+      display_usage
+      exit 1
+  fi
+}
+
+check_vagrantfile () {
+  if [[ -f "./Vagrantfile" ]]; then
+      return 0
+  else
+    return 1
+  fi
+}
+
+init_vm () {
+  case $1 in
+    nixos)
+      vagrant init zimbatm/nixos-15.09-x86_64
+      ;;
+    ubuntu)
+      vagrant init ubuntu/wily64
+      ;;
+    elcapitan)
+      vagrant init jhcook/osx-elcapitan-10.11
+      ;;
+    yosemite)
+      vagrant init jhcook/osx-yosemite-10.10
+      ;;
+    freebsd)
+      vagrant init freebsd/FreeBSD-10.2-RELEASE
+      ;;
+    *)
+      error "The requested machine \e[0;34m\e[1m${1}\e[0;0m is not available."
+    ;;
+  esac
+}
+
+command_vm () {
+  local op=$1
+
+  # TODO: perform operations based on $op
+  vagrant $op
+}
+
+run_vm () {
+  local vm=$1
+  local op=$2
+
+  if ! check_vagrantfile; then
+    init_vm $vm
+  fi
+
+  command_vm $op
+}
+
+ensure_provider () {
+  case $OPT_PROVIDER in
+    VirtualBox)
+      if ! pgrep VirtualBox > /dev/null 2>&1; then
+          VirtualBox &
+      fi
+      ;;
+    *)
+      error "Unable to handle provider \e[0;34m\e[1m${OPT_PROVIDER}\e[0;0m."
+      ;;
+  esac
+}
+
+load_vm () {
+  local vm=$1
+  local op=$2
+
+  cd $BASE_DIR
+
+  [[ ! -d $vm ]] && mkdir $vm > /dev/null 2>&1
+
+  cd $vm
+  run_vm $vm $op
+}
+
+main () {
+  while getopts ":f:p:" opt; do
+    case $opt in
+      f) OPT_FOO=${OPTARG} ;;
+      p) OPT_PROVIDER=${OPTARG} ;;
+      *) return 1 ;;
+    esac
+  done
+
+  shift $((OPTIND-1))
+
+  check_binaries
+  check_arguments $@
+  ensure_directories
+
+  ensure_provider
+  load_vm $@
+}
+
+main "$@"
