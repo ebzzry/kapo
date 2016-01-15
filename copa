@@ -9,7 +9,6 @@ USER_SCRIPTRC=$HOME/.${SCRIPT}rc
 BASE_DIR=$HOME/$SCRIPT
 
 OPT_HELP=
-OPT_FOO=
 OPT_PROVIDER=VirtualBox
 
 error () {
@@ -78,11 +77,25 @@ check_vagrantfile () {
   fi
 }
 
-command_vm () {
+control_vm () {
   local op=$1
+  shift
 
-  # TODO: perform operations based on $op
-  vagrant $op
+  case $op in
+    ssh)
+      if [[ "$#" == 0 ]]; then
+          vagrant ssh
+      else
+        vagrant ssh -c $@
+      fi
+      ;;
+    rm)
+      vagrant destroy
+      ;;
+    *)
+      vagrant $op $@
+      ;;
+  esac
 }
 
 load_provider () {
@@ -146,6 +159,9 @@ aux_command () {
     kill)
       kill_provider
       ;;
+    ls|list)
+      ls $BASE_DIR
+      ;;
     *)
       return 0
       ;;
@@ -164,10 +180,10 @@ init_vm () {
 
 run_vm () {
   local box=$1
-  local op=$2
+  shift
 
   init_vm $box
-  command_vm $op
+  control_vm $@
 }
 
 get_box () {
@@ -178,8 +194,8 @@ get_box () {
 
 load_vm () {
   local vm=$1
-  local op=$2
   local box=$(get_box $vm)
+  shift
 
   if [[ -z "$box" ]]; then
       error "The VM $vm is not defined. Please add a definition in your .coparc."
@@ -188,7 +204,7 @@ load_vm () {
     cd $BASE_DIR
     [[ ! -d $vm ]] && mkdir $vm > /dev/null 2>&1
     cd $vm
-    run_vm $box $op
+    run_vm $box $@
   fi
 }
 
@@ -196,7 +212,6 @@ main () {
   while getopts ":hf:p:" opt; do
     case $opt in
       h) OPT_HELP=true ;;
-      f) OPT_FOO=${OPTARG} ;;
       p) OPT_PROVIDER=${OPTARG} ;;
       *) return 1 ;;
     esac
