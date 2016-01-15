@@ -4,8 +4,11 @@ set -eu
 set -o pipefail
 
 SCRIPT=$(basename "${BASH_SOURCE[0]}")
+GLOBAL_SCRIPTRC=/etc/coparc
+USER_SCRIPTRC=$HOME/.${SCRIPT}rc
 BASE_DIR=$HOME/$SCRIPT
 
+OPT_HELP=
 OPT_FOO=
 OPT_PROVIDER=VirtualBox
 
@@ -14,12 +17,14 @@ error () {
   exit 1
 }
 
-message () {
-  echo -e $@
-}
+read_scriptrc () {
+  [[ -e $GLOBAL_SCRIPTRC ]] && source $GLOBAL_SCRIPTRC   # base
 
-create_temp_dir () {
-  return 0
+  if [[ -e $USER_SCRIPTRC ]]; then
+      source $USER_SCRIPTRC
+  else
+    error "No RC files exist. Please create one, then re-run this program."
+  fi
 }
 
 ensure_directories () {
@@ -30,39 +35,39 @@ ensure_directories () {
 
 display_usage () {
   cat <<EOF
-$SCRIPT [options] <VM> <Operation>
+$SCRIPT [OPTIONS] <VM> <OP>
 
-Options:
+OPTIONS:
+-h                       Show this help
+-p PROVIDER              Select provider
 
-Available VMs:
+PROVIDERS: VirtualBox
 
-nixos
-ubuntu
-elcapitan
-yosemite
+VMS: nixos, ubuntu, freebsd
 
-Available operations:
-
-up
-ssh
-destroy
-down|halt
+OPS: up, ssh, destroy, halt
 EOF
+  exit 0
 }
 
-check_binaries () {
-  for i in vagrant VirtualBox pgrep; do
-    if ! type -P $i > /dev/null; then
-        error "The program \e[0;34m\e[1m${i}\e[0;0m is missing. Please install it, then re-run this script."
-    fi
-  done
+check_options () {
+  if [[ -n "$OPT_HELP" ]]; then
+      display_usage
+  fi
 }
 
 check_arguments () {
   if [[ "$#" -lt 1 ]]; then
       display_usage
-      exit 1
   fi
+}
+
+check_binaries () {
+  for i in vagrant VirtualBox pgrep; do
+    if ! type -P $i > /dev/null; then
+        error "The program \e[0;34m\e[1m${i}\e[0;0m is missing. Please install it, then re-run this program."
+    fi
+  done
 }
 
 check_vagrantfile () {
@@ -73,29 +78,6 @@ check_vagrantfile () {
   fi
 }
 
-init_vm () {
-  case $1 in
-    nixos)
-      vagrant init zimbatm/nixos-15.09-x86_64
-      ;;
-    ubuntu)
-      vagrant init ubuntu/wily64
-      ;;
-    elcapitan)
-      vagrant init jhcook/osx-elcapitan-10.11
-      ;;
-    yosemite)
-      vagrant init jhcook/osx-yosemite-10.10
-      ;;
-    freebsd)
-      vagrant init freebsd/FreeBSD-10.2-RELEASE
-      ;;
-    *)
-      error "The requested machine \e[0;34m\e[1m${1}\e[0;0m is not available."
-    ;;
-  esac
-}
-
 command_vm () {
   local op=$1
 
@@ -103,18 +85,7 @@ command_vm () {
   vagrant $op
 }
 
-run_vm () {
-  local vm=$1
-  local op=$2
-
-  if ! check_vagrantfile; then
-    init_vm $vm
-  fi
-
-  command_vm $op
-}
-
-ensure_provider () {
+load_provider () {
   case $OPT_PROVIDER in
     VirtualBox)
       if ! pgrep VirtualBox > /dev/null 2>&1; then
@@ -125,6 +96,20 @@ ensure_provider () {
       error "Unable to handle provider \e[0;34m\e[1m${OPT_PROVIDER}\e[0;0m."
       ;;
   esac
+}
+
+purge_vm () {
+  local vm=$1
+  local input=""
+
+  echo -n "Are you sure want to purge the VM $vm? "
+  read -p "[y/N] " input
+
+  if [[ "$input" == "y" ]]; then
+      find $BASE_DIR -maxdepth 1 -type d -name $vm -exec rm -rvf {} \;
+  else
+    return 1
+  fi
 }
 
 purge_vms () {
@@ -148,10 +133,15 @@ kill_provider () {
 
 aux_command () {
   local cmd=$1
+  shift
 
   case $cmd in
     purge)
-      purge_vms
+      if [[ "$#" == 0 ]]; then
+          purge_vms
+      else
+        purge_vm $1
+      fi
       ;;
     kill)
       kill_provider
@@ -164,21 +154,48 @@ aux_command () {
   exit 0
 }
 
+init_vm () {
+  local box=$1
+
+  if ! check_vagrantfile; then
+      vagrant init $box
+  fi
+}
+
+run_vm () {
+  local box=$1
+  local op=$2
+
+  init_vm $box
+  command_vm $op
+}
+
+get_box () {
+  local vm=$1
+  read_scriptrc
+  echo $(eval "echo \$$vm")
+}
+
 load_vm () {
   local vm=$1
   local op=$2
+  local box=$(get_box $vm)
 
-  cd $BASE_DIR
-
-  [[ ! -d $vm ]] && mkdir $vm > /dev/null 2>&1
-
-  cd $vm
-  run_vm $vm $op
+  if [[ -z "$box" ]]; then
+      error "The VM $vm is not defined. Please add a definition in your .coparc."
+  else
+    load_provider
+    cd $BASE_DIR
+    [[ ! -d $vm ]] && mkdir $vm > /dev/null 2>&1
+    cd $vm
+    run_vm $box $op
+  fi
 }
 
 main () {
-  while getopts ":f:p:" opt; do
+  while getopts ":hf:p:" opt; do
     case $opt in
+      h) OPT_HELP=true ;;
       f) OPT_FOO=${OPTARG} ;;
       p) OPT_PROVIDER=${OPTARG} ;;
       *) return 1 ;;
@@ -187,13 +204,13 @@ main () {
 
   shift $((OPTIND-1))
 
-  check_binaries
+  check_options
   check_arguments $@
+  check_binaries
   ensure_directories
 
   aux_command $@
 
-  ensure_provider
   load_vm $@
 }
 
