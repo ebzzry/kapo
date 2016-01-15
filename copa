@@ -3,10 +3,10 @@
 set -eu
 set -o pipefail
 
-SCRIPT=$(basename "${BASH_SOURCE[0]}")
-GLOBAL_SCRIPTRC=/etc/coparc
-USER_SCRIPTRC=$HOME/.${SCRIPT}rc
-BASE_DIR=$HOME/$SCRIPT
+readonly SELF=$(basename "${BASH_SOURCE[0]}")
+readonly GLOBAL_COPARC=/etc/coparc
+readonly USER_COPARC=$HOME/.${SELF}rc
+readonly BASE_DIR=$HOME/$SELF
 
 OPT_HELP=
 OPT_PROVIDER=vbox
@@ -17,24 +17,18 @@ error () {
 }
 
 read_scriptrc () {
-  [[ -e $GLOBAL_SCRIPTRC ]] && source $GLOBAL_SCRIPTRC   # base
+  [[ -e $GLOBAL_COPARC ]] && source $GLOBAL_COPARC   # base
 
-  if [[ -e $USER_SCRIPTRC ]]; then
-      source $USER_SCRIPTRC
+  if [[ -e $USER_COPARC ]]; then
+      source $USER_COPARC
   else
     error "No RC files exist. Please create one, then re-run this program."
   fi
 }
 
-ensure_directories () {
-  if [[ ! -d $BASE_DIR ]]; then
-      mkdir -p $BASE_DIR
-  fi
-}
-
 display_usage () {
   cat <<EOF
-$SCRIPT [OPTIONS] <VM> <OP>
+$SELF [OPTIONS] <VM> <OP>
 
 OPTIONS:
 -h                       Show this help
@@ -165,7 +159,7 @@ aux_command () {
       fi
       ;;
     la|list-available)
-      for file in $GLOBAL_SCRIPTRC $USER_SCRIPTRC; do
+      for file in $GLOBAL_COPARC $USER_COPARC; do
         if [[ -f $file ]]; then
             cat $file | sed -e '/#/d' | awk -F = '{print $1}'
         fi
@@ -177,6 +171,29 @@ aux_command () {
   esac
 
   exit 0
+}
+
+get_box () {
+  local vm=$1
+
+  read_scriptrc
+  echo $(eval "echo \$$vm")
+}
+
+ensure_base_directory () {
+  if [[ ! -d $BASE_DIR ]]; then
+      mkdir -p $BASE_DIR
+  fi
+}
+
+ensure_vm_directory () {
+  local vm=$1
+
+  ensure_base_directory
+
+  if [[ ! -d $BASE_DIR/$vm ]]; then
+      mkdir -p $BASE_DIR/$vm > /dev/null 2>&1
+  fi
 }
 
 init_vm () {
@@ -192,14 +209,8 @@ run_vm () {
   shift
 
   init_vm $box
+  load_provider
   control_vm $@
-}
-
-get_box () {
-  local vm=$1
-
-  read_scriptrc
-  echo $(eval "echo \$$vm")
 }
 
 load_vm () {
@@ -210,16 +221,14 @@ load_vm () {
   if [[ -z "$box" ]]; then
       error "The VM $vm is not defined. Please add a definition in your .coparc."
   else
-    load_provider
-    cd $BASE_DIR
-    [[ ! -d $vm ]] && mkdir $vm > /dev/null 2>&1
-    cd $vm
+    ensure_vm_directory $vm
+    cd $BASE_DIR/$vm
     run_vm $box $@
   fi
 }
 
 main () {
-  while getopts ":hf:p:" opt; do
+  while getopts ":hp:" opt; do
     case $opt in
       h) OPT_HELP=true ;;
       p) OPT_PROVIDER=${OPTARG} ;;
@@ -232,7 +241,6 @@ main () {
   check_options
   check_arguments $@
   check_binaries
-  ensure_directories
 
   aux_command $@
 
