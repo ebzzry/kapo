@@ -7,17 +7,27 @@ readonly SELF=$(basename "${BASH_SOURCE[0]}")
 readonly SYSTEM_COPARC=/etc/coparc
 readonly USER_COPARC=$HOME/.${SELF}rc
 readonly BASE_DIR=$HOME/$SELF
+readonly OS=$(uname)
 
 OPT_HELP=
 OPT_PROVIDER=vbox
 
 error () {
-  echo -e "\e[0;31m\e[1merror: \e[0;0m$@" >&2
+  if [[ "$OS" == "Darwin" ]]; then
+      echo "error: $@" >&2
+  else
+    echo -e "\e[0;31m\e[1merror: \e[0;0m$@" >&2
+  fi
+
   exit 1
 }
 
 warning () {
-  echo -e "\e[0;31mwarning: \e[0;0m$@" >&2
+  if [[ "$OS" == "Darwin" ]]; then
+      echo "warning: $@" >&2
+  else
+    echo -e "\e[0;31mwarning: \e[0;0m$@" >&2
+  fi
 }
 
 warning_no_rc () {
