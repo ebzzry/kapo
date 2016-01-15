@@ -10,6 +10,7 @@ readonly BASE_DIR=$HOME/$SELF
 readonly OS=$(uname)
 
 OPT_HELP=
+OPT_SHOW_PROVIDER=
 OPT_PROVIDER=vbox
 
 error () {
@@ -58,8 +59,9 @@ $SELF [OPTIONS] <VM|COMMAND> <OPERATION>
 OPTIONS:
 -h                       Show this help
 -p PROVIDER              Specify provider
+-s                       Show provider UI
 
-PROVIDERS: vbox
+PROVIDERS: virtualbox
 
 VM: (please check your .coparc file)
 
@@ -123,17 +125,19 @@ control_vm () {
   esac
 }
 
-load_provider () {
-  case $OPT_PROVIDER in
-    VirtualBox|virtualbox|vbox)
-      if ! pgrep VirtualBox > /dev/null 2>&1; then
-          VirtualBox > /dev/null 2>&1 &
-      fi
-      ;;
-    *)
-      error "Unable to handle provider \e[0;34m\e[1m${OPT_PROVIDER}\e[0;0m."
-      ;;
-  esac
+show_provider () {
+  if [[ -n "$OPT_SHOW_PROVIDER" ]]; then
+      case $OPT_PROVIDER in
+        VirtualBox|virtualbox|vbox)
+          if ! pgrep VirtualBox > /dev/null 2>&1; then
+              VirtualBox > /dev/null 2>&1 &
+          fi
+          ;;
+        *)
+          error "Unable to handle provider \e[0;34m\e[1m${OPT_PROVIDER}\e[0;0m."
+          ;;
+      esac
+  fi
 }
 
 purge_vm () {
@@ -287,7 +291,7 @@ run_vm () {
   shift
 
   init_vm $box
-  load_provider
+  show_provider
   control_vm $@
 }
 
@@ -306,9 +310,10 @@ load_vm () {
 }
 
 main () {
-  while getopts ":hp:" opt; do
+  while getopts ":hsp:" opt; do
     case $opt in
       h) OPT_HELP=true ;;
+      s) OPT_SHOW_PROVIDER=true ;;
       p) OPT_PROVIDER=${OPTARG} ;;
       *) return 1 ;;
     esac
