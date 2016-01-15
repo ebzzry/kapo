@@ -59,7 +59,7 @@ check_binaries () {
 }
 
 check_arguments () {
-  if [[ "$#" -lt 2 ]]; then
+  if [[ "$#" -lt 1 ]]; then
       display_usage
       exit 1
   fi
@@ -127,6 +127,43 @@ ensure_provider () {
   esac
 }
 
+purge_vms () {
+  local input="no"
+
+  echo -e "Are you sure want to purge all the following VMs:\n"
+  echo $(ls $BASE_DIR)
+  echo -en "\nPlease type all uppercase YES to proceed: "
+  read input
+
+  if [[ "$input" == "YES" ]]; then
+      find $BASE_DIR -maxdepth 1 -not -path $BASE_DIR -exec rm -rvf {} \;
+  else
+    return 1
+  fi
+}
+
+kill_provider () {
+  pkill -9 $OPT_PROVIDER
+}
+
+aux_command () {
+  local cmd=$1
+
+  case $cmd in
+    purge)
+      purge_vms
+      ;;
+    kill)
+      kill_provider
+      ;;
+    *)
+      return 0
+      ;;
+  esac
+
+  exit 0
+}
+
 load_vm () {
   local vm=$1
   local op=$2
@@ -153,6 +190,8 @@ main () {
   check_binaries
   check_arguments $@
   ensure_directories
+
+  aux_command $@
 
   ensure_provider
   load_vm $@
