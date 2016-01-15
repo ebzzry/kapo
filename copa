@@ -156,15 +156,15 @@ aux_command () {
         purge_vm $1
       fi
       ;;
-    kill)
+    kp|kill)
       kill_provider
       ;;
-    lsi|list-installed)
+    li|list-installed)
       if [[ -d $BASE_DIR ]]; then
           ls -1 $BASE_DIR
       fi
       ;;
-    lsa|list-available)
+    la|list-available)
       for file in $GLOBAL_SCRIPTRC $USER_SCRIPTRC; do
         if [[ -f $file ]]; then
             cat $file | sed -e '/#/d' | awk -F = '{print $1}'
@@ -197,6 +197,7 @@ run_vm () {
 
 get_box () {
   local vm=$1
+
   read_scriptrc
   echo $(eval "echo \$$vm")
 }
