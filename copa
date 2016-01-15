@@ -20,10 +20,14 @@ warning () {
   echo -e "\e[0;31mwarning: \e[0;0m$@" >&2
 }
 
+warning_no_rc () {
+  warning "No RC files were found. You may create a default one by running: '$SELF mr'"
+}
+
 check_coparc () {
   if [[ ! -e $SYSTEM_COPARC && ! -e $USER_COPARC ]]; then
       echo ""
-      warning "No RC files were found. You may create a default one by running: '$SELF mr'"
+      warning_no_rc
   fi
 }
 
@@ -33,7 +37,7 @@ read_coparc () {
   if [[ -e $USER_COPARC ]]; then # overrides
       source $USER_COPARC
   else
-    error "No RC files exist. Please create one, then re-run this program."
+    warning_no_rc
   fi
 }
 
@@ -210,7 +214,7 @@ aux_command () {
     la|list-available)
       list_available_vms
       ;;
-    mkrc|make-rc)
+    mr|mkrc|make-rc)
       make_rc
       ;;
     *)
