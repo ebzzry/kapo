@@ -22,9 +22,8 @@ warning () {
 
 check_coparc () {
   if [[ ! -e $SYSTEM_COPARC && ! -e $USER_COPARC ]]; then
-      return 1
-  else
-    return 0
+      echo ""
+      warning "No RC files were found. You may create a default one by running: '$SELF mr'"
   fi
 }
 
@@ -44,22 +43,18 @@ $SELF [OPTIONS] <VM|COMMAND> <OPERATION>
 
 OPTIONS:
 -h                       Show this help
--p PROVIDER              Select provider
+-p PROVIDER              Specify provider
 
 PROVIDERS: vbox
 
 VM: (please check your .coparc file)
 
-COMMANDS: purge|rm, kill|k, list-installed|li, list-available|la, make-rc|mkrc
+COMMANDS: purge|rm, kill|kp, list-installed|li, list-available|la, make-rc|mr
 
-OPERATIONS: up, ssh, down, rm
+OPERATIONS: up, ssh, down, rm, status
 EOF
 
-  if ! check_coparc; then
-      echo -e "\n"
-      warning "No RC files were found. You may create a default one by running:\n\n$SELF mkrc"
-  fi
-
+  check_coparc
   exit 0
 }
 
