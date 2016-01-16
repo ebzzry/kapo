@@ -8,4 +8,4 @@
 
 nixos=zimbatm/nixos-15.09-x86_64
 ubuntu=ubuntu/wily64
-freebsd=freebsd/FreeBSD-10.2-RELEASE
+debian=debian/jessie64
