@@ -1,4 +1,5 @@
-# copa
+copa
+====
 
 _copa_ is a small utility that leverages on Vagrant, VirtualBox, and
 other tools, to make it easy to manage virtual machines.
@@ -88,5 +89,5 @@ vm_name=box_name
 
 Where `vm_name` stands for the alias to use with copa and `box_name`
 stands for boxes that are found in
-https://atlas.hashicorp.com/boxes/search
+[https://atlas.hashicorp.com/boxes/search](https://atlas.hashicorp.com/boxes/search)
 

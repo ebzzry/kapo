@@ -10,7 +10,7 @@ readonly BASE_DIR=$HOME/$SELF
 readonly OS=$(uname)
 
 OPT_HELP=
-OPT_SHOW_PROVIDER=
+OPT_SHOW_PROVIDER=true
 OPT_PROVIDER=vbox
 
 error () {
@@ -109,19 +109,9 @@ control_vm () {
   case $op in
     on|up) vagrant up $@ ;;
     off|down) vagrant halt $@ ;;
-    ssh)
-      if [[ "$#" == 0 ]]; then
-          vagrant ssh
-      else
-        vagrant ssh -c $@
-      fi
-      ;;
-    rm|del)
-      vagrant destroy
-      ;;
-    *)
-      vagrant $op $@
-      ;;
+    ssh) vagrant ssh $@ ;;
+    rm|del) vagrant destroy ;;
+    *) vagrant $op $@ ;;
   esac
 }
 
@@ -228,7 +218,7 @@ aux_command () {
     la|list-available)
       list_available_vms
       ;;
-    mr|mkrc|make-rc)
+    mr|make-rc)
       make_rc
       ;;
     *)
