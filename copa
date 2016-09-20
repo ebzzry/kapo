@@ -1,16 +1,18 @@
-#!/usr/bin/env bash
+#!/usr/bin/env nix-shell
+#!nix-shell -i bash -p bash getopt coreutils
 
 set -eu
 set -o pipefail
 
 readonly SELF=$(basename "${BASH_SOURCE[0]}")
-readonly SYSTEM_COPARC=/etc/coparc
+readonly SYSTEM_COPARC=/etc/${SELF}rc
 readonly USER_COPARC=$HOME/.${SELF}rc
 readonly BASE_DIR=$HOME/$SELF
 readonly OS=$(uname)
 
 OPT_HELP=
-OPT_SHOW_PROVIDER=true
+OPT_DEBUG=
+OPT_VERBOSE=
 OPT_PROVIDER=vbox
 
 error () {
@@ -35,6 +37,17 @@ warning_no_rc () {
   warning "No RC files were found. You may create a default one by running: '$SELF mr'"
 }
 
+debug () {
+  if [[ -n "$OPT_DEBUG" ]]; then
+      echo '**'
+      echo \$@: $@
+      echo \$OPT_HELP: "$OPT_HELP"
+      echo \$OPT_DEBUG: "$OPT_DEBUG"
+      echo \$OPT_VERBOSE: "$OPT_VERBOSE"
+      echo \$OPT_PROVIDER: "$OPT_PROVIDER"
+  fi
+}
+
 check_coparc () {
   if [[ ! -e $SYSTEM_COPARC && ! -e $USER_COPARC ]]; then
       echo ""
@@ -43,31 +56,49 @@ check_coparc () {
 }
 
 read_coparc () {
-  [[ -e $SYSTEM_COPARC ]] && source $SYSTEM_COPARC   # base
+  # base
+  [[ -e $SYSTEM_COPARC ]] && source $SYSTEM_COPARC
 
-  if [[ -e $USER_COPARC ]]; then # overrides
+  # user overrides
+  if [[ -e $USER_COPARC ]]; then
       source $USER_COPARC
   else
     warning_no_rc
   fi
 }
 
+parse_arguments () {
+  debug parse_arguments $@
+
+  local opts=$(getopt -n "$SELF" --options hdvsp: --longoptions help,debug,verbose,provider: -- "$@")
+
+  if [[ $? != 0 ]]; then error "failed to parsing arguments."; fi
+
+  eval set -- "$opts"
+
+  while true; do
+    case "$1" in
+      (-h|--help) OPT_HELP=true; shift ;;
+      (-d|--debug) OPT_DEBUG=true; shift ;;
+      (-v|--verbose) OPT_VERBOSE=true; shift ;;
+      (-p|--provider) OPT_PROVIDER=$2; shift 2 ;;
+      (--) shift; break ;;
+      (*) break ;;
+    esac
+  done
+}
+
 display_usage () {
   cat <<EOF
-$SELF [OPTIONS] <VM|COMMAND> <OPERATION>
+$SELF [Options] <VM|Command> <Operation>
 
-OPTIONS:
--h                       Show this help
--p PROVIDER              Specify provider
--s                       Show provider UI
+Options:
+-h,--help                  Show this help
+-p,--provider PROVIDER     Specify provider
 
-PROVIDERS: virtualbox
-
-VM: (please check your .coparc file)
-
-COMMANDS: purge|rm, kill|kp, list-installed|li, list-available|la, make-rc|mr
-
-OPERATIONS: up, ssh, down, rm, status
+Providers: virtualbox
+Commands: purge, kill, list-installed, list-available, make-rc
+Operations: up, ssh, down, rm, status
 EOF
 
   check_coparc
@@ -195,9 +226,10 @@ make_rc () {
   else
     cat > $USER_COPARC <<EOF
 nixos=zimbatm/nixos-15.09-x86_64
-ubuntu=ubuntu/wily64
+ubuntu=ubuntu/trusty64
 debian=debian/jessie64
 EOF
+
   fi
 }
 
@@ -206,24 +238,12 @@ aux_command () {
   shift
 
   case $cmd in
-    purge|rm)
-      purge $@
-      ;;
-    kp|kill|kill-provider)
-      kill_provider $@
-      ;;
-    li|list-installed)
-      list_installed_vms
-      ;;
-    la|list-available)
-      list_available_vms
-      ;;
-    mr|make-rc)
-      make_rc
-      ;;
-    *)
-      return 0
-      ;;
+    purge) purge $@ ;;
+    kill) kill_provider $@ ;;
+    list-installed) list_installed_vms ;;
+    list-available) list_available_vms ;;
+    make-rc) make_rc ;;
+    *) return 0 ;;
   esac
 
   exit 0
@@ -281,7 +301,7 @@ run_vm () {
   shift
 
   init_vm $box
-  show_provider
+  # show_provider
   control_vm $@
 }
 
@@ -300,17 +320,9 @@ load_vm () {
 }
 
 main () {
-  while getopts ":hsp:" opt; do
-    case $opt in
-      h) OPT_HELP=true ;;
-      s) OPT_SHOW_PROVIDER=true ;;
-      p) OPT_PROVIDER=${OPTARG} ;;
-      *) return 1 ;;
-    esac
-  done
+  debug main "$@"
 
-  shift $((OPTIND-1))
-
+  parse_arguments "$@"
   check_options
   check_arguments $@
   check_binaries
