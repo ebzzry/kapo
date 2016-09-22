@@ -45,6 +45,18 @@ To connect to it via SSH:
 $ kapo ssh ubuntu
 ```
 
+To display its date:
+
+```bash
+$ kapo ssh coreos date
+```
+
+To display its uname:
+
+```bash
+$ kapo ssh coreos -- uname -a
+```
+
 To check its status:
 
 ```bash
@@ -63,13 +75,13 @@ To remove the machine’s entry:
 $ kapo delete ubuntu
 ```
 
-To add a machine spec to the configuration, giving it a name:
+To add a machine spec to the configuration:
 
 ```bash
 $ kapo add centos=centos/7
 ```
 
-To delete the above spec:
+To delete the above spec from the configuration:
 
 ```bash
 $ kapo remove centos=centos/7

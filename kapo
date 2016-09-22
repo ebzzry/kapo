@@ -1,5 +1,5 @@
 #!/usr/bin/env nix-shell
-#!nix-shell -i bash -p bash getopt coreutils vagrant linuxPackages.virtualboxHeadless
+#!nix-shell -i bash -p bash getopt coreutils gawk gnused gnugrep vagrant linuxPackages.virtualboxHeadless
 
 set -eu
 set -o pipefail
@@ -104,22 +104,23 @@ display_usage () {
   debug display_usage "$@"
 
   cat <<EOF
-$SELF [OPTIONS]... <COMMAND> <MACHINE> [COMMAND_OPTIONS]...
+$SELF [OPTIONS]... <COMMAND> <MACHINE|SPEC|PROVIDER> [COMMAND_OPTIONS]...
 
 OPTIONS:
   -h,--help                  Show this help
   -p,--provider PROVIDER     Specify the provider
 
 COMMANDS:
-  up,on
-  down,off,halt
-  destroy,delete
-  status
-  ssh
-  purge
-  machines,ls
-  boxes,lb
-  kill,kill-provider
+  up,on MACHINE              Boot up a machine
+  down,off,halt MACHINE      Perform a graceful shutdown of a machine
+  destroy MACHINE            Stop a machine unconditionally
+  status MACHINE             Display status of a machine
+  ssh MACHINE [ARGS]         SSH to machine with optional ARGS
+  purge MACHINE              Delete machine at the filesystem level
+  machines,ls                List installed machines
+  boxes,lb                   List available boxes
+  add SPEC                   Add a spec to the config file
+  remove SPEC                Remove a spec from the config file
 
 PROVIDERS:
   virtualbox
@@ -217,7 +218,7 @@ list_boxes () {
 
   for file in $SYSTEM_CONFIG $USER_CONFIG; do
     if [[ -f $file ]]; then
-        cat $file | sed -e '/#/d' | awk -F = '{print $1}' | sort | sed 1d
+        cat $file | sed -e '/#/d' | sort | sed 1d
     fi
   done
 }
@@ -227,15 +228,15 @@ is_machine_installed () {
 
   local machine=$1
 
-  if [[ -d "$BASE_DIR/$machine" ]]; then
+  if [[ -f "$BASE_DIR/$machine/Vagrantfile" ]]; then
       return 0
   else
     return 1
   fi
 }
 
-is_machine_available () {
-  debug is_machine_available "$@"
+is_box_available () {
+  debug is_box_available "$@"
 
   local machine=$1
 
@@ -253,12 +254,54 @@ box_name () {
 
   read_config
 
-  if is_machine_available $machine; then
+  if is_box_available $machine; then
       echo $(eval "echo \$$machine")
   elif is_machine_installed $machine; then
       echo "$machine"
   else
     echo ""
+  fi
+}
+
+spec_exists () {
+  debug spec_exists "$@"
+  
+  local spec=$1
+  local file=$2
+
+  if [[ -f "$file" ]]; then
+      if grep -q "$spec" "$file"; then
+          return 0
+      else
+        return 1
+      fi
+  fi
+}
+
+add_machine () {
+  debug add_machine "$@"
+
+  local spec=$1
+  local file=$2
+
+  if ! spec_exists "$spec" "$file"; then
+      echo "$spec" >> "$file"
+  else
+    error "The spec $spec already exists. Skipping operation."
+  fi
+}
+
+remove_machine () {
+  debug remove_machine "$@"
+
+  local spec=$1
+  local file=$2
+  local temp=$(mktemp)
+
+  if spec_exists "$spec" "$file"; then
+      grep -v "$spec" "$file" > "$temp" && mv "$temp" "$file"
+  else
+    error "The spec $spec doesn’t exist. Skipping operation."
   fi
 }
 
@@ -316,26 +359,20 @@ ensure_config () {
 internal_command () {
   debug internal_command "$@"
 
-  local cmd=$1
+  local op=$1
   shift
 
-  case $cmd in
-    (purge)
-      purge_machine $@
-      ;;
-    (kill|kill-provider)
-      kill_provider $@
-      ;;
-    (list-machines|ls|machines)
-      list_machines
-      ;;
-    (list-boxes|lb|boxes)
-      list_boxes
-      ;;
+  case $op in
+    (add) add_machine "$1" "$USER_CONFIG" ;;
+    (remove) remove_machine "$1" "$USER_CONFIG" ;;
+    (purge) purge_machine "$@" ;;
+    (kill|kill-provider) kill_provider "$@" ;;
+    (ls|machines) list_machines ;;
+    (lb|boxes) list_boxes ;;
     (*) return 0 ;;
   esac
 
-  exit 0
+  exit $?
 }
 
 control_machine () {
