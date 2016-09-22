@@ -90,3 +90,8 @@ Where `vm_name` stands for the alias to use with kapo and `box_name`
 stands for boxes that are found in
 [atlas.hashicorp.com/boxes/search](https://atlas.hashicorp.com/boxes/search)
 
+For example, to define an OpenBSD box:
+
+```bash
+openbsd=tmatilai/openbsd-5.6
+```
