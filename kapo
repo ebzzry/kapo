@@ -34,7 +34,7 @@ warn () {
 }
 
 warn_no_config () {
-  warn "No RC files were found. You may create a default one by running: '$SELF mr'"
+  warn "No config files were found. You may create a default one by running: '$SELF mc'"
 }
 
 debug () {
@@ -93,9 +93,7 @@ parse_arguments () {
 process_arguments () {
   debug process_arguments "$@"
 
-  if [[ -n "$OPT_HELP" ]]; then
-      display_usage
-  elif [[ "$#" -lt 1 ]]; then
+  if [[ -n "$OPT_HELP" || "$#" -lt 1 ]]; then
       display_usage
   else
     return 0
@@ -119,8 +117,8 @@ Commands:
   status
   ssh
   purge
-  list-available-machines,ls
-  list-installed-machines,li
+  machines,ls
+  boxes,lb
   kill,kill-provider
 
 Providers:
@@ -130,7 +128,7 @@ Providers:
 Commands other than the ones listed above are passed to Vagrant.
 EOF
 
-  check_config
+  #check_config
   exit 0
 }
 
@@ -207,15 +205,15 @@ kill_provider () {
   fi
 }
 
-list_installed_machines () {
-  debug list_installed_machines "$@"
+list_machines () {
+  debug list_machines "$@"
 
   [[ ! -d "$BASE_DIR" ]] && mkdir -p "$BASE_DIR"
   [[ -d "$BASE_DIR" ]] && ls -1 "$BASE_DIR"
 }
 
-list_available_machines () {
-  debug list_available_machines "$@"
+list_boxes () {
+  debug list_boxes "$@"
 
   for file in $SYSTEM_CONFIG $USER_CONFIG; do
     if [[ -f $file ]]; then
@@ -241,7 +239,7 @@ is_machine_available () {
 
   local machine=$1
 
-  if list_available_machines | grep -q $machine; then
+  if list_boxes | grep -q $machine; then
       return 0
   else
     return 1
@@ -328,11 +326,11 @@ internal_command () {
     (kill|kill-provider)
       kill_provider $@
       ;;
-    (list-available-machines|ls)
-      list_available_machines
+    (list-machines|ls|machines)
+      list_machines
       ;;
-    (list-installed-machines|li)
-      list_installed_machines
+    (list-boxes|lb|boxes)
+      list_boxes
       ;;
     (*) return 0 ;;
   esac
