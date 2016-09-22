@@ -16,27 +16,22 @@ curl https://nixos.org/nix/install | bash
 ```
 
 After you have installed Nix, copy the `kapo` script anywhere that is
-accessible in the locations contained in the `$PATH` variable, for example, `~/bin`:
+accessible in the locations contained in the `$PATH` variable, for
+example, `~/bin`:
 
 ```bash
 cp kapo ~/bin
+chmod +x ~/bin/kapo
 ```
 
 
 ## Basic usage
 
-For kapo to run, it needs to read a definitions file. It reads first
-from `/etc/kaporc`, then from `~/.kaporc`. To create a basic kaporc,
-run:
+When no config files exist, kapo creates a default one in
+`~/.kaporc`. The basic .kaporc defines the latest stable versions of
+Ubuntu, Debian, and NixOS.
 
-```bash
-$ kapo mc
-```
-
-The basic .kaporc defines the latest stable versions of Ubuntu,
-Debian, and NixOS.
-
-To install the latest stable version of Ubuntu, run:
+To fetch the latest stable version of Ubuntu:
 
 ```bash
 $ kapo up ubuntu

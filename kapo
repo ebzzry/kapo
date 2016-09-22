@@ -13,7 +13,7 @@ readonly OS=$(uname)
 OPT_HELP=
 OPT_DEBUG=
 OPT_VERBOSE=
-OPT_PROVIDER=vbox
+OPT_PROVIDER=VirtualBox
 
 error () {
   if [[ "$OS" == "Darwin" ]]; then
@@ -110,7 +110,7 @@ $SELF [Options] <Command> <Machine>
 
 Options:
   -h,--help                  Show this help
-  -p,--provider PROVIDER     Specify provider
+  -p,--provider PROVIDER     Specify the provider
 
 Commands:
   up,on
@@ -121,7 +121,6 @@ Commands:
   purge
   list-available-machines,ls
   list-installed-machines,li
-  make-config,mc
   kill,kill-provider
 
 Providers:
@@ -225,21 +224,6 @@ list_available_machines () {
   done
 }
 
-make_config () {
-  debug make_config "$@"
-
-  if [[ -e "$USER_CONFIG" ]]; then
-      error "An existing RC file is found. Skipping file creation."
-  else
-    cat > $USER_CONFIG <<EOF
-ubuntu=ubuntu/trusty64
-debian=debian/jessie64
-nixos=zimbatm/nixos-15.09-x86_64
-EOF
-
-  fi
-}
-
 is_machine_installed () {
   debug is_machine_installed "$@"
 
@@ -310,6 +294,27 @@ initialize_box () {
   fi
 }
 
+make_config () {
+  debug make_config "$@"
+
+  if [[ -e "$USER_CONFIG" ]]; then
+      error "An existing RC file is found. Skipping file creation."
+  else
+    cat > $USER_CONFIG <<EOF
+ubuntu=ubuntu/trusty64
+debian=debian/jessie64
+nixos=pspringmeyer/nixos-16.03-x86_64
+EOF
+
+  fi
+}
+
+ensure_config () {
+  if [[ ! -f "$SYSTEM_CONFIG" && ! -f "$USER_CONFIG" ]]; then
+      make_config
+  fi
+}
+
 control_machine () {
   debug control_machine "$@"
 
@@ -321,6 +326,7 @@ control_machine () {
     up|on) vagrant up ;;
     down|off|halt) vagrant halt ;;
     destroy|delete) vagrant destroy ;;
+    ssh) echo \$args: $args ;;
     *) vagrant $op $@ ;;
   esac
 }
@@ -348,12 +354,22 @@ internal_command () {
   shift
 
   case $cmd in
-    purge) purge_machine $@ ;;
-    kill|kill-provider) kill_provider $@ ;;
-    list-available-machines|ls) list_available_machines ;;
-    list-installed-machines|li) list_installed_machines ;;
-    make-config|mc) make_config ;;
-    *) return 0 ;;
+    (purge)
+      purge_machine $@
+      ;;
+    (kill|kill-provider)
+      kill_provider $@
+      ;;
+    (list-available-machines|ls)
+      list_available_machines
+      ;;
+    (list-installed-machines|li)
+      list_installed_machines
+      ;;
+    # (make-config|mc)
+    #   make_config
+    #   ;;
+    (*) return 0 ;;
   esac
 
   exit 0
@@ -385,6 +401,9 @@ main () {
   parse_arguments "$@"
   process_arguments "$@"
   check_binaries
+
+  ensure_config
+  
   internal_command "$@"
   load_machine "$@"
 }
