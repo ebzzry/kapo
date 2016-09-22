@@ -104,13 +104,13 @@ display_usage () {
   debug display_usage "$@"
 
   cat <<EOF
-$SELF [Options] <Command> <Machine>
+$SELF [OPTIONS]... <COMMAND> <MACHINE> [COMMAND_OPTIONS]...
 
-Options:
+OPTIONS:
   -h,--help                  Show this help
   -p,--provider PROVIDER     Specify the provider
 
-Commands:
+COMMANDS:
   up,on
   down,off,halt
   destroy,delete
@@ -121,7 +121,7 @@ Commands:
   boxes,lb
   kill,kill-provider
 
-Providers:
+PROVIDERS:
   virtualbox
   docker (WIP)
 

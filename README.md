@@ -64,16 +64,16 @@ $ kapo delete ubuntu
 
 ## Miscellaneous commands
 
-To list the available machines, as defined in your .kaporc:
+To list the installed machines:
 
 ```bash
-$ kapo ls
+$ kapo machines
 ```
 
-To list the machines that are installed:
+To list the available boxes, as defined in your configuration:
 
 ```bash
-$ kapo li
+$ kapo boxes
 ```
 
 
