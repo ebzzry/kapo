@@ -258,7 +258,7 @@ box_name () {
   if is_machine_available $machine; then
       echo $(eval "echo \$$machine")
   elif is_machine_installed $machine; then
-      echo "z"
+      echo "$machine"
   else
     echo ""
   fi
@@ -315,38 +315,6 @@ ensure_config () {
   fi
 }
 
-control_machine () {
-  debug control_machine "$@"
-
-  local args=$@
-  local op=$1
-  shift
-
-  case $op in
-    up|on) vagrant up ;;
-    down|off|halt) vagrant halt ;;
-    destroy|delete) vagrant destroy ;;
-    ssh) echo \$args: $args ;;
-    *) vagrant $op $@ ;;
-  esac
-}
-
-run_machine () {
-  debug run_machine "$@"
-
-  local box=
-
-  if [[ $# == 1 ]]; then
-      control_machine "$@"
-  else
-    box=$1
-    shift
-
-    initialize_box "$box"
-    control_machine "$@"
-  fi
-}
-
 internal_command () {
   debug internal_command "$@"
 
@@ -366,13 +334,48 @@ internal_command () {
     (list-installed-machines|li)
       list_installed_machines
       ;;
-    # (make-config|mc)
-    #   make_config
-    #   ;;
     (*) return 0 ;;
   esac
 
   exit 0
+}
+
+control_machine () {
+  debug control_machine "$@"
+
+  local op=$1
+  shift
+
+  case $op in
+    up|on) vagrant up ;;
+    down|off|halt) vagrant halt ;;
+    destroy|delete) vagrant destroy ;;
+    ssh) vagrant ssh -- "$@";;
+    *) vagrant "$op" "$@" ;;
+  esac
+}
+
+run_machine () {
+  debug run_machine "$@"
+
+  local opts=$(getopt -n "run_machine" --options i --longoptions initialize -- "$@")
+  local opt_initialize=
+
+  eval set -- "$opts"
+
+  while true; do
+    case "$1" in
+      (-i|--initialize) opt_initialize=true; shift  ;;
+      (--) shift; break ;;
+      (*) break ;;
+    esac
+  done
+
+  local box=$1
+
+  [[ -n "$opt_initialize" ]] && initialize_box "$box"
+  shift
+  control_machine $@
 }
 
 load_machine () {
@@ -380,18 +383,23 @@ load_machine () {
 
   [[ ! $# -ge 2 ]] && error "unsufficient number of arguments"
 
+  local op=$1
   local machine=$2
   local box=$(box_name $machine)
 
-  if [[ "$box" == "z" ]]; then
+  shift 2
+
+  if [[ "$box" == "$machine" ]]; then
       cd "$BASE_DIR/$machine"
-      run_machine "${@:1:$(($#-1))}"
+      #run_machine "${@:1:$(($#-1))}"
+      run_machine $box $op $@
   elif [[ -z "$box" ]]; then
       error "The machine $machine is not defined. Please add a definition in your configuration."
   else
     ensure_machine_directory $machine
     cd "$BASE_DIR/$machine"
-    run_machine "$box" "${@:1:$(($#-1))}"
+    #run_machine "$box" "${@:1:$(($#-1))}"
+    run_machine --initialize $box $op $@
   fi
 }
 
