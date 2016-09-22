@@ -2,7 +2,9 @@ kapo
 ====
 
 _kapo_ is a small utility that leverages on Vagrant, VirtualBox, and
-other tools, to make it easy to manage virtual machines.
+other tools, to make it easier to manage virtual machines. The word
+*kapo* is Esperanto for *head* (noun), hence the idea of control and
+management.
 
 
 ## Installation
@@ -61,8 +63,17 @@ To remove the machine’s entry:
 $ kapo delete ubuntu
 ```
 
+To add a machine spec to the configuration, giving it a name:
 
-## Miscellaneous commands
+```bash
+$ kapo add centos=centos/7
+```
+
+To delete the above spec:
+
+```bash
+$ kapo remove centos=centos/7
+```
 
 To list the installed machines:
 
