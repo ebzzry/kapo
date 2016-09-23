@@ -416,7 +416,7 @@ run_machine () {
 load_machine () {
   debug load_machine "$@"
 
-  [[ ! $# -ge 2 ]] && error "unsufficient number of arguments"
+  [[ ! $# -ge 2 ]] && error "insufficient number of arguments"
 
   local op=$1
   local machine=$2
