@@ -44,7 +44,7 @@ debug () {
       echo \$OPT_HELP: "$OPT_HELP"
       echo \$OPT_DEBUG: "$OPT_DEBUG"
       echo \$OPT_VERBOSE: "$OPT_VERBOSE"
-      echo \$OPT_PROVIDER: "$OPT_PROVIDER"
+      #echo \$OPT_PROVIDER: "$OPT_PROVIDER"
   fi
 }
 
@@ -104,15 +104,14 @@ display_usage () {
   debug display_usage "$@"
 
   cat <<EOF
-$SELF [OPTIONS]... <COMMAND> <MACHINE|SPEC|PROVIDER> [COMMAND_OPTIONS]...
+$SELF [OPTIONS]... <COMMAND> <MACHINE|SPEC> [COMMAND_OPTIONS]...
 
 OPTIONS:
-  -h,--help                  Show this help
-  -p,--provider PROVIDER     Specify the provider
+  -h, --help                  Show this help
 
 COMMANDS:
   up,on MACHINE              Boot up a machine
-  down,off,halt MACHINE      Perform a graceful shutdown of a machine
+  down,off MACHINE           Perform a graceful shutdown of a machine
   destroy MACHINE            Stop a machine unconditionally
   status MACHINE             Display status of a machine
   ssh MACHINE [ARGS]         SSH to machine with optional ARGS
@@ -121,12 +120,7 @@ COMMANDS:
   boxes,lb                   List available boxes
   add SPEC                   Add a spec to the config file
   remove SPEC                Remove a spec from the config file
-
-PROVIDERS:
-  virtualbox
-  docker (WIP)
-
-Commands other than the ones listed above are passed to Vagrant.
+  <COMMAND> [ARGS]           Pass command and optional args to Vagrant
 EOF
 
   #check_config
