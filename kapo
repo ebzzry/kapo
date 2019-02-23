@@ -115,10 +115,11 @@ COMMANDS:
   status <MACHINE>             Display status of a machine
   ssh <MACHINE> [ARGS]         SSH to machine with optional ARGS
   purge <MACHINE>              Delete machine at the filesystem level
-  machines,ls                  List installed machines
-  boxes,lb                     List available boxes
+  machines                     List installed machines
+  boxes                        List available boxes
   add <SPEC>                   Add a spec to the config file
   remove <SPEC>                Remove a spec from the config file
+  link <DIRECTORY> <NAME>      Create a box entry for <DIRECTORY> under name <NAME>
   <COMMAND> [ARGS]             Pass command and optional args to Vagrant
 EOF
 
@@ -348,6 +349,27 @@ ensure_config () {
   fi
 }
 
+create_link () {
+  debug create_link "$@"
+
+  if [[ $# -eq 2 ]]; then
+    local source=$1
+    local name=$2
+
+    [[ -h "${BASE_DIR}/${name}" ]] && rm -f "${BASE_DIR}/${name}"
+
+    if [[ -d "${BASE_DIR}/${name}" ]]; then
+      error "Directory ${BASE_DIR}/${name} already exists; not symlinking."
+    elif [[ -f "${BASE_DIR}/${name}" ]]; then
+      error "File ${BASE_DIR}/${name} already exists; not symlinking."
+    else
+      ln -s "${source}" "${BASE_DIR}/${name}"
+    fi
+  else
+    display_usage
+  fi
+}
+
 internal_command () {
   debug internal_command "$@"
 
@@ -361,6 +383,7 @@ internal_command () {
     (kill|kill-provider) kill_provider "$@" ;;
     (machines|ls) list_machines ;;
     (boxes|lsb) list_boxes ;;
+    (link) create_link "$@" ;;
     (*) return 0 ;;
   esac
 
