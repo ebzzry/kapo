@@ -11,7 +11,7 @@ kapo
 - [Boxes](#boxes)
   - [Standard boxes](#standardboxes)
   - [Custom boxes](#standardboxes)
-- [Configuration file](#Configurationfile)
+- [Configuration file](#configurationfile)
 
 
 <a name="overview">Overview</a>
@@ -100,15 +100,15 @@ To bring it up, run:
 
 Let’s presume that you already have a project with a Vagrantfile in it, which lives in:
 
-    /home/user/Desktop/work/bananas/Vagrantfile
+    ~/Desktop/work/bananas/vagrant/Vagrantfile
 
 To add its entry to kapo, run:
 
     kapo add bananas=DUMMY
 
-Create a symlink to that directory, in `~/.kapo/`:
+Create a link:
 
-    ln -s ~/Desktop/work/bananas ~/.kapo/bananas
+    kapo link ~/Desktop/work/bananas/vagrant bananas
 
 Then, bring it up:
 
