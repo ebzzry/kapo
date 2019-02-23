@@ -1,13 +1,29 @@
 kapo
 ====
 
+
+<a name="toc">Table of contents</a>
+--------------------------------
+
+- [Overview](#overview)
+- [Installation](#installation)
+- [Basic usage](#basicusage)
+- [Boxes](#boxes)
+  - [Standard boxes](#standardboxes)
+  - [Custom boxes](#standardboxes)
+- [Configuration file](#Configurationfile)
+
+
+<a name="overview">Overview</a>
+-------------------------------
+
 _kapo_ is a small utility that leverages on Vagrant, VirtualBox, and other tools, to make it easier
 to manage virtual machines. The word *kapo* is Esperanto for *head* (noun), hence the idea of
 control and management.
 
 
-Installation
-------------
+<a name="installation">Installation</a>
+---------------------------------------
 
 Simply copy `kapo` into `~/bin/` or `/usr/local/bin/` and everything should work.
 
@@ -15,8 +31,8 @@ Simply copy `kapo` into `~/bin/` or `/usr/local/bin/` and everything should work
     chmod +x ~/bin/kapo
 
 
-Basic usage
------------
+<a name="basicusage">Basic usage</a>
+------------------------------------
 
 When no config files exist, kapo creates a default one in `~/.kaporc`. The basic .kaporc defines the
 latest stable versions of Ubuntu, Debian, and NixOS.
@@ -66,28 +82,21 @@ To list the available boxes, as defined in your configuration:
     $ kapo boxes
 
 
-Config file
------------
+<a name="boxes">Boxes</a>
+-------------------------
 
-The `.kaporc` file is just a simple file that gets `source`d by the
-script. The format is:
+### <a name="standardboxes">Standard boxes</a>
 
-```bash
-vm_name=box_name
-```
+To add boxes that are official supported, for example [laravel/homestead](https://app.vagrantup.com/laravel/boxes/homestead), run:
 
-Where `vm_name` stands for the alias to use with kapo and `box_name` stands for boxes that are found
-in [atlas.hashicorp.com/boxes/search](https://atlas.hashicorp.com/boxes/search)
+    kapo add laravel=laravel/homestead
 
-For example, to define an OpenBSD box:
+To bring it up, run:
 
-```bash
-openbsd=tmatilai/openbsd-5.6
-```
+    kapo up laravel
 
 
-Custom boxes
-------------
+### <a name="customboxes">Custom boxes</a>
 
 Let’s presume that you already have a project with a Vagrantfile in it, which lives in:
 
@@ -104,3 +113,17 @@ Create a symlink to that directory, in `~/.kapo/`:
 Then, bring it up:
 
     kapo up bananas
+
+
+<a name="configurationfile">Configuration file</a>
+--------------------------------------------------
+
+The `.kaporc` file is just a simple file that gets `source`d by the
+script. The format is:
+
+```bash
+vm_name=box_name
+```
+
+Where `vm_name` stands for the alias to use with kapo and `box_name` stands for boxes that are found
+in [https://app.vagrantup.com/boxes/search](https://app.vagrantup.com/boxes/search).
