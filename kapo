@@ -109,7 +109,7 @@ OPTIONS:
   -h, --help                  Show this help
 
 COMMANDS:
-  up,on <MACHINE>              Boot up a machine
+  up,on,boot <MACHINE>         Boot up a machine
   down,off,halt <MACHINE>      Perform a graceful shutdown of a machine
   destroy,delete <MACHINE>     Stop a machine unconditionally
   status <MACHINE>             Display status of a machine
@@ -397,7 +397,7 @@ control_machine () {
   shift
 
   case $op in
-    (up|on) vagrant up ;;
+    (up|on|boot) vagrant up ;;
     (down|off|halt) vagrant halt ;;
     (destroy|delete) vagrant destroy ;;
     (ssh) vagrant ssh -- "$@";;
@@ -433,7 +433,7 @@ vagrant_command () {
 
   if [[ $# -eq 1 ]]; then
     vagrant $@
-  elif [[ $# -gt 2 ]]; then
+  elif [[ $# -ge 2 ]]; then
     local op=$1
     local machine=$2
     local box=$(box_name $machine)
