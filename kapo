@@ -1,5 +1,4 @@
-#!/usr/bin/env nix-shell
-#!nix-shell -i bash -p bash getopt coreutils gawk gnused gnugrep vagrant linuxPackages.virtualboxHeadless
+#!/usr/bin/env bash
 
 set -eu
 set -o pipefail
@@ -7,7 +6,7 @@ set -o pipefail
 readonly SELF=$(basename "${BASH_SOURCE[0]}")
 readonly SYSTEM_CONFIG=/etc/${SELF}rc
 readonly USER_CONFIG=$HOME/.${SELF}rc
-readonly BASE_DIR=$HOME/$SELF
+readonly BASE_DIR=$HOME/.$SELF
 readonly OS=$(uname)
 
 OPT_HELP=
@@ -17,7 +16,7 @@ OPT_PROVIDER=VirtualBox
 
 error () {
   if [[ "$OS" == "Darwin" ]]; then
-      echo "error: $@" >&2
+    echo "error: $@" >&2
   else
     echo -e "\e[0;31m\e[1merror: \e[0;0m$@" >&2
   fi
@@ -27,7 +26,7 @@ error () {
 
 warn () {
   if [[ "$OS" == "Darwin" ]]; then
-      echo "warning: $@" >&2
+    echo "warning: $@" >&2
   else
     echo -e "\e[0;33mwarning: \e[0;0m$@" >&2
   fi
@@ -39,12 +38,12 @@ warn_no_config () {
 
 debug () {
   if [[ -n "$OPT_DEBUG" ]]; then
-      echo '**'
-      echo \$@: $@
-      echo \$OPT_HELP: "$OPT_HELP"
-      echo \$OPT_DEBUG: "$OPT_DEBUG"
-      echo \$OPT_VERBOSE: "$OPT_VERBOSE"
-      #echo \$OPT_PROVIDER: "$OPT_PROVIDER"
+    echo '**'
+    echo \$@: $@
+    echo \$OPT_HELP: "$OPT_HELP"
+    echo \$OPT_DEBUG: "$OPT_DEBUG"
+    echo \$OPT_VERBOSE: "$OPT_VERBOSE"
+    echo \$OPT_PROVIDER: "$OPT_PROVIDER"
   fi
 }
 
@@ -52,8 +51,8 @@ check_config () {
   debug check_config "$@"
 
   if [[ ! -e $SYSTEM_CONFIG && ! -e $USER_CONFIG ]]; then
-      echo ""
-      warn_no_config
+    echo ""
+    warn_no_config
   fi
 }
 
@@ -61,9 +60,9 @@ read_config () {
   debug read_config "$@"
 
   if [[ -e $SYSTEM_CONFIG ]]; then
-      source $SYSTEM_CONFIG
+    source $SYSTEM_CONFIG
   elif [[ -e $USER_CONFIG ]]; then
-      source $USER_CONFIG
+    source $USER_CONFIG
   else
     warn_no_config
   fi
@@ -94,7 +93,7 @@ process_arguments () {
   debug process_arguments "$@"
 
   if [[ -n "$OPT_HELP" || "$#" -lt 1 ]]; then
-      display_usage
+    display_usage
   else
     return 0
   fi
@@ -110,17 +109,17 @@ OPTIONS:
   -h, --help                  Show this help
 
 COMMANDS:
-  up,on MACHINE              Boot up a machine
-  down,off MACHINE           Perform a graceful shutdown of a machine
-  destroy MACHINE            Stop a machine unconditionally
-  status MACHINE             Display status of a machine
-  ssh MACHINE [ARGS]         SSH to machine with optional ARGS
-  purge MACHINE              Delete machine at the filesystem level
-  machines,ls                List installed machines
-  boxes,lb                   List available boxes
-  add SPEC                   Add a spec to the config file
-  remove SPEC                Remove a spec from the config file
-  <COMMAND> [ARGS]           Pass command and optional args to Vagrant
+  up,on <MACHINE>              Boot up a machine
+  down,off,halt <MACHINE>      Perform a graceful shutdown of a machine
+  destroy,delete <MACHINE>     Stop a machine unconditionally
+  status <MACHINE>             Display status of a machine
+  ssh <MACHINE> [ARGS]         SSH to machine with optional ARGS
+  purge <MACHINE>              Delete machine at the filesystem level
+  machines,ls                  List installed machines
+  boxes,lb                     List available boxes
+  add <SPEC>                   Add a spec to the config file
+  remove <SPEC>                Remove a spec from the config file
+  <COMMAND> [ARGS]             Pass command and optional args to Vagrant
 EOF
 
   #check_config
@@ -132,7 +131,7 @@ check_binaries () {
 
   for i in vagrant VirtualBox pgrep; do
     if ! type -P $i > /dev/null; then
-        error "The program \e[0;34m\e[1m${i}\e[0;0m is missing. Please install it, then re-run this program."
+      error "The program \e[0;34m\e[1m${i}\e[0;0m is missing. Please install it, then re-run this program."
     fi
   done
 }
@@ -141,7 +140,7 @@ check_vagrantfile () {
   debug check_vagrantfile "$@"
 
   if [[ -f "$PWD/Vagrantfile" ]]; then
-      return 0
+    return 0
   else
     return 1
   fi
@@ -157,7 +156,7 @@ purge_machine () {
   read -p "[y/N] " input
 
   if [[ "$input" == "y" || "$input" == "Y" ]]; then
-      rm -rvf $BASE_DIR/$machine
+    rm -rvf $BASE_DIR/$machine
   else
     return 1
   fi
@@ -174,7 +173,7 @@ purge_machines () {
   read input
 
   if [[ "$input" == "YES" ]]; then
-      find $BASE_DIR -maxdepth 1 -not -path $BASE_DIR -exec rm -rvf {} \;
+    find $BASE_DIR -maxdepth 1 -not -path $BASE_DIR -exec rm -rvf {} \;
   else
     return 1
   fi
@@ -184,7 +183,7 @@ purge_machine () {
   debug purge_machine "$@"
 
   if [[ "$#" == 0 ]]; then
-      purge_machines
+    purge_machines
   else
     purge_machine $1
   fi
@@ -194,7 +193,7 @@ kill_provider () {
   debug kill_provider "$@"
 
   if [[ "$#" == 1 ]]; then
-      pkill $1
+    pkill $1
   else
     pkill -9 $OPT_PROVIDER
   fi
@@ -212,7 +211,7 @@ list_boxes () {
 
   for file in $SYSTEM_CONFIG $USER_CONFIG; do
     if [[ -f $file ]]; then
-        cat $file | sed -e '/#/d' | sort | sed 1d
+      cat $file | sed -e '/#/d' | sort | sed 1d
     fi
   done
 }
@@ -223,7 +222,7 @@ is_machine_installed () {
   local machine=$1
 
   if [[ -f "$BASE_DIR/$machine/Vagrantfile" ]]; then
-      return 0
+    return 0
   else
     return 1
   fi
@@ -235,7 +234,7 @@ is_box_available () {
   local machine=$1
 
   if list_boxes | grep -q $machine; then
-      return 0
+    return 0
   else
     return 1
   fi
@@ -249,9 +248,9 @@ box_name () {
   read_config
 
   if is_box_available $machine; then
-      echo $(eval "echo \$$machine")
+    echo $(eval "echo \$$machine")
   elif is_machine_installed $machine; then
-      echo "$machine"
+    echo "$machine"
   else
     echo ""
   fi
@@ -259,16 +258,16 @@ box_name () {
 
 spec_exists () {
   debug spec_exists "$@"
-  
+
   local spec=$1
   local file=$2
 
   if [[ -f "$file" ]]; then
-      if grep -q "$spec" "$file"; then
-          return 0
-      else
-        return 1
-      fi
+    if grep -q "$spec" "$file"; then
+      return 0
+    else
+      return 1
+    fi
   fi
 }
 
@@ -279,7 +278,7 @@ add_machine () {
   local file=$2
 
   if ! spec_exists "$spec" "$file"; then
-      echo "$spec" >> "$file"
+    echo "$spec" >> "$file"
   else
     error "The spec $spec already exists. Skipping operation."
   fi
@@ -293,7 +292,7 @@ remove_machine () {
   local temp=$(mktemp)
 
   if spec_exists "$spec" "$file"; then
-      grep -v "$spec" "$file" > "$temp" && mv "$temp" "$file"
+    grep -v "$spec" "$file" > "$temp" && mv "$temp" "$file"
   else
     error "The spec $spec doesn’t exist. Skipping operation."
   fi
@@ -303,7 +302,7 @@ ensure_base_directory () {
   debug ensure_base_directory "$@"
 
   if [[ ! -d $BASE_DIR ]]; then
-      mkdir -p $BASE_DIR
+    mkdir -p $BASE_DIR
   fi
 }
 
@@ -315,7 +314,7 @@ ensure_machine_directory () {
   ensure_base_directory
 
   if [[ ! -d "$BASE_DIR/$machine" ]]; then
-      mkdir -p "$BASE_DIR/$machine" > /dev/null 2>&1
+    mkdir -p "$BASE_DIR/$machine" > /dev/null 2>&1
   fi
 }
 
@@ -325,7 +324,7 @@ initialize_box () {
   local box=$1
 
   if ! check_vagrantfile; then
-      vagrant init $box
+    vagrant init $box
   fi
 }
 
@@ -333,12 +332,11 @@ make_config () {
   debug make_config "$@"
 
   if [[ -e "$USER_CONFIG" ]]; then
-      error "An existing RC file is found. Skipping file creation."
+    error "An existing RC file is found. Skipping file creation."
   else
     cat > $USER_CONFIG <<EOF
 ubuntu=ubuntu/trusty64
 debian=debian/jessie64
-nixos=pspringmeyer/nixos-16.03-x86_64
 EOF
 
   fi
@@ -346,7 +344,7 @@ EOF
 
 ensure_config () {
   if [[ ! -f "$SYSTEM_CONFIG" && ! -f "$USER_CONFIG" ]]; then
-      make_config
+    make_config
   fi
 }
 
@@ -376,11 +374,11 @@ control_machine () {
   shift
 
   case $op in
-    up|on) vagrant up ;;
-    down|off|halt) vagrant halt ;;
-    destroy|delete) vagrant destroy ;;
-    ssh) vagrant ssh -- "$@";;
-    *) vagrant "$op" "$@" ;;
+    (up|on) vagrant up ;;
+    (down|off|halt) vagrant halt ;;
+    (destroy|delete) vagrant destroy ;;
+    (ssh) vagrant ssh -- "$@";;
+    (*) vagrant "$op" "$@" ;;
   esac
 }
 
@@ -419,11 +417,11 @@ load_machine () {
   shift 2
 
   if [[ "$box" == "$machine" ]]; then
-      cd "$BASE_DIR/$machine"
-      #run_machine "${@:1:$(($#-1))}"
-      run_machine $box $op $@
+    cd "$BASE_DIR/$machine"
+    #run_machine "${@:1:$(($#-1))}"
+    run_machine $box $op $@
   elif [[ -z "$box" ]]; then
-      error "The machine $machine is not defined. Please add a definition in your configuration."
+    error "The machine $machine is not defined. Please add a definition in your configuration."
   else
     ensure_machine_directory $machine
     cd "$BASE_DIR/$machine"
@@ -440,7 +438,7 @@ main () {
   check_binaries
 
   ensure_config
-  
+
   internal_command "$@"
   load_machine "$@"
 }
