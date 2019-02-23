@@ -359,8 +359,8 @@ internal_command () {
     (remove) remove_machine "$1" "$USER_CONFIG" ;;
     (purge) purge_machine "$@" ;;
     (kill|kill-provider) kill_provider "$@" ;;
-    (ls|machines) list_machines ;;
-    (lb|boxes) list_boxes ;;
+    (machines|ls) list_machines ;;
+    (boxes|lsb) list_boxes ;;
     (*) return 0 ;;
   esac
 
@@ -405,28 +405,30 @@ run_machine () {
   control_machine $@
 }
 
-load_machine () {
-  debug load_machine "$@"
+vagrant_command () {
+  debug vagrant_command "$@"
 
-  [[ ! $# -ge 2 ]] && error "insufficient number of arguments"
+  if [[ $# -eq 1 ]]; then
+    vagrant $@
+  elif [[ $# -eq 2 ]]; then
+    local op=$1
+    local machine=$2
+    local box=$(box_name $machine)
 
-  local op=$1
-  local machine=$2
-  local box=$(box_name $machine)
+    shift 2
 
-  shift 2
-
-  if [[ "$box" == "$machine" ]]; then
-    cd "$BASE_DIR/$machine"
-    #run_machine "${@:1:$(($#-1))}"
-    run_machine $box $op $@
-  elif [[ -z "$box" ]]; then
-    error "The machine $machine is not defined. Please add a definition in your configuration."
+    if [[ "$box" == "$machine" ]]; then
+      cd "$BASE_DIR/$machine"
+      run_machine $box $op $@
+    elif [[ -z "$box" ]]; then
+      error "The machine $machine is not defined. Please add a definition in your configuration."
+    else
+      ensure_machine_directory $machine
+      cd "$BASE_DIR/$machine"
+      run_machine --initialize $box $op $@
+    fi
   else
-    ensure_machine_directory $machine
-    cd "$BASE_DIR/$machine"
-    #run_machine "$box" "${@:1:$(($#-1))}"
-    run_machine --initialize $box $op $@
+    error "I don’t know."
   fi
 }
 
@@ -440,7 +442,7 @@ main () {
   ensure_config
 
   internal_command "$@"
-  load_machine "$@"
+  vagrant_command "$@"
 }
 
 main "$@"
