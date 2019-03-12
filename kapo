@@ -149,7 +149,7 @@ check_vagrantfile () {
   fi
 }
 
-purge_machine () {
+purge_machine_single () {
   debug purge_machine "${@}"
 
   local machine="${1}"
@@ -188,7 +188,7 @@ purge_machine () {
   if [[ "${#}" == 0 ]]; then
     purge_machines
   else
-    purge_machine $1
+    purge_machine_single $1
   fi
 }
 
