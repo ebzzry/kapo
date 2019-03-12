@@ -8,6 +8,7 @@ readonly SYSTEM_CONFIG=/etc/${SELF}rc
 readonly USER_CONFIG=${HOME}/.${SELF}rc
 readonly BASE_DIR=${HOME}/.${SELF}
 readonly OS=$(uname)
+readonly VERSION=0.0.3
 
 OPT_HELP=
 OPT_DEBUG=
@@ -115,11 +116,12 @@ COMMANDS:
   status <MACHINE>             Display status of a machine
   ssh <MACHINE> [ARGS]         SSH to machine with optional ARGS
   purge <MACHINE>              Delete machine at the filesystem level
-  machines                     List installed machines
-  boxes                        List available boxes
+  list-machines                List installed machines
+  list-boxes                   List available boxes
   add <SPEC>                   Add a spec to the config file
   remove <SPEC>                Remove a spec from the config file
   link <DIRECTORY> <NAME>      Create a box entry for <DIRECTORY> under name <NAME>
+  edit <MACHINE>               Edit the configuration file for <MACHINE>
   <COMMAND> [ARGS]             Pass command and optional args to Vagrant
 EOF
 
@@ -370,6 +372,15 @@ create_link () {
   fi
 }
 
+edit_config () {
+  debug edit_config "${@}"
+
+  local machine="${1}"
+  local config="${BASE_DIR}/${machine}/Vagrantfile"
+
+  [[ -f "${config}" ]] && $EDITOR "${config}"
+}
+
 internal_command () {
   debug internal_command "${@}"
 
@@ -381,9 +392,10 @@ internal_command () {
     (remove) remove_machine "${1}" "${USER_CONFIG}" ;;
     (purge) purge_machine "${@}" ;;
     (kill|kill-provider) kill_provider "${@}" ;;
-    (machines|ls) list_machines ;;
-    (boxes|lsb) list_boxes ;;
+    (list-machines|ls) list_machines ;;
+    (list-boxes|lsb) list_boxes ;;
     (link) create_link "${@}" ;;
+    (edit) edit_config "${@}" ;;
     (*) return 0 ;;
   esac
 
@@ -430,9 +442,8 @@ run_machine () {
 vagrant_command () {
   debug vagrant_command "${@}"
 
-  if [[ "${#}" -eq 1 ]]; then
-    vagrant "${@}"
-  elif [[ "${#}" -ge 2 ]]; then
+  case "${1}" in
+    (init|up|destroy|halt|reload|ssh|ssh-config|resume|share|status)
     local op="${1}"
     local machine="${2}"
     local box=$(box_name $machine)
@@ -448,9 +459,9 @@ vagrant_command () {
       cd "${BASE_DIR}/${machine}"
       run_machine --initialize -- "${box}" "${op}" "${@}"
     fi
-  else
-    error "I don’t know."
-  fi
+    ;;
+    (*) vagrant "${@}" ;;
+  esac
 }
 
 main () {
