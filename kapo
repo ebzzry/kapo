@@ -110,9 +110,9 @@ OPTIONS:
   -h, --help                  Show this help
 
 COMMANDS:
-  up,on,boot <MACHINE>         Boot up a machine
-  down,off,halt <MACHINE>      Perform a graceful shutdown of a machine
-  destroy,delete <MACHINE>     Stop a machine unconditionally
+  up <MACHINE>                 Boot up a machine
+  halt <MACHINE>               Perform a graceful shutdown of a machine
+  destroy <MACHINE>            Stop a machine unconditionally
   status <MACHINE>             Display status of a machine
   ssh <MACHINE> [ARGS]         SSH to machine with optional ARGS
   purge <MACHINE>              Delete machine at the filesystem level
@@ -124,8 +124,6 @@ COMMANDS:
   edit <MACHINE>               Edit the configuration file for <MACHINE>
   <COMMAND> [ARGS]             Pass command and optional args to Vagrant
 EOF
-
-  #check_config
   exit 0
 }
 
@@ -409,8 +407,6 @@ control_machine () {
   shift
 
   case "${op}" in
-    (up|on|boot) vagrant up "${@}" ;;
-    (down|off|halt) vagrant halt "${@}" ;;
     (ssh) vagrant ssh -- "${@}";;
     (*) vagrant "${op}" "${@}" ;;
   esac
