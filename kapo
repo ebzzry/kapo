@@ -336,7 +336,7 @@ make_config () {
     error "An existing RC file is found. Skipping file creation."
   else
     cat > "${USER_CONFIG}" << EOF
-ubuntu=ubuntu/trusty64
+ubuntu=ubuntu/bionic64
 debian=debian/jessie64
 EOF
 
