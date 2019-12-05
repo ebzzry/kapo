@@ -338,6 +338,7 @@ make_config () {
     cat > "${USER_CONFIG}" << EOF
 ubuntu=ubuntu/bionic64
 debian=debian/jessie64
+fedora=generic/fedora28
 EOF
 
   fi
