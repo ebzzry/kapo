@@ -17,9 +17,8 @@ kapo
 <a name="overview">Overview</a>
 -------------------------------
 
-_kapo_ is a small utility that leverages on Vagrant, VirtualBox, and other tools, to make it easier
-to manage virtual machines. The word *kapo* is Esperanto for *head* (noun), hence the idea of
-control and management.
+_kapo_ is a simple utility that leverages on Vagrant, VirtualBox, and other tools, to make it easier
+to manage virtual machines. _kapo_ allows you to run Vagrant commands in any directory.
 
 
 <a name="installation">Installation</a>

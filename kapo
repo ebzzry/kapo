@@ -8,14 +8,16 @@ readonly SYSTEM_CONFIG=/etc/${SELF}rc
 readonly USER_CONFIG=${HOME}/.${SELF}rc
 readonly BASE_DIR=${HOME}/.${SELF}
 readonly OS=$(uname)
-readonly VERSION=0.0.3
+readonly VERSION=1.0.0
 
 OPT_HELP=
 OPT_DEBUG=
 OPT_VERBOSE=
-OPT_PROVIDER=VirtualBox
 
-error () {
+OPT_PROVIDER=VirtualBox
+OPT_MODE=vagrant
+
+function error () {
   if [[ "${OS}" == "Darwin" ]]; then
     echo "error: ${@}" >&2
   else
@@ -25,7 +27,7 @@ error () {
   exit 1
 }
 
-warn () {
+function warn () {
   if [[ "${OS}" == "Darwin" ]]; then
     echo "warning: ${@}" >&2
   else
@@ -33,11 +35,11 @@ warn () {
   fi
 }
 
-warn_no_config () {
+function warn_no_config () {
   warn "No config files were found. You may create a default one by running: '${SELF} make-config'"
 }
 
-debug () {
+function debug () {
   if [[ -n "${OPT_DEBUG}" ]]; then
     echo '**'
     echo \${@}: ${@}
@@ -48,8 +50,8 @@ debug () {
   fi
 }
 
-check_config () {
-  debug check_config "${@}"
+function check_config () {
+  debug ${FUNCNAME[0]} "$@"
 
   if [[ ! -e "${SYSTEM_CONFIG}" && ! -e "${USER_CONFIG}" ]]; then
     echo ""
@@ -57,8 +59,8 @@ check_config () {
   fi
 }
 
-read_config () {
-  debug read_config "${@}"
+function read_config () {
+  debug ${FUNCNAME[0]} "$@"
 
   if [[ -e "${SYSTEM_CONFIG}" ]]; then
     source "${SYSTEM_CONFIG}"
@@ -69,10 +71,10 @@ read_config () {
   fi
 }
 
-parse_arguments () {
-  debug parse_arguments "${@}"
+function parse_arguments () {
+  debug ${FUNCNAME[0]} "$@"
 
-  local opts=$(getopt -n "${SELF}" --options hdvsp: --longoptions help,debug,verbose,provider: -- "${@}")
+  local opts=$(getopt -n "${SELF}" --options hdvsp:m: --longoptions help,debug,verbose,provider:,mode: -- "$@")
 
   if [[ $? != 0 ]]; then error "failed to parsing arguments."; fi
 
@@ -80,18 +82,19 @@ parse_arguments () {
 
   while true; do
     case "$1" in
-      (-h|--help) OPT_HELP=true; shift ;;
-      (-d|--debug) OPT_DEBUG=true; shift ;;
-      (-v|--verbose) OPT_VERBOSE=true; shift ;;
-      (-p|--provider) OPT_PROVIDER=$2; shift 2 ;;
-      (--) shift; break ;;
-      (*) break ;;
+      -h|--help) OPT_HELP=true; shift ;;
+      -d|--debug) OPT_DEBUG=true; shift ;;
+      -v|--verbose) OPT_VERBOSE=true; shift ;;
+      -p|--provider) OPT_PROVIDER=$2; shift 2 ;;
+      -m|--mode) OPT_MODE=$2; shift 2 ;;
+      --) shift; break ;;
+      *) break ;;
     esac
   done
 }
 
-process_arguments () {
-  debug process_arguments "${@}"
+function process_arguments () {
+  debug ${FUNCNAME[0]} "$@"
 
   if [[ -n "${OPT_HELP}" || "${#}" -lt 1 ]]; then
     display_usage
@@ -100,35 +103,35 @@ process_arguments () {
   fi
 }
 
-display_usage () {
-  debug display_usage "${@}"
+function display_usage () {
+  debug ${FUNCNAME[0]} "$@"
 
   cat << EOF
-${SELF} [OPTIONS]... <COMMAND> <MACHINE|SPEC> [COMMAND_OPTIONS]...
+${SELF} [OPTIONS]... <COMMAND> <VM|SPEC> [COMMAND_OPTIONS]...
 
 OPTIONS:
   -h, --help                  Show this help
 
 COMMANDS:
-  up <MACHINE>                 Boot up a machine
-  halt <MACHINE>               Perform a graceful shutdown of a machine
-  destroy <MACHINE>            Stop a machine unconditionally
-  status <MACHINE>             Display status of a machine
-  ssh <MACHINE> [ARGS]         SSH to machine with optional ARGS
-  purge <MACHINE>              Delete machine at the filesystem level
-  list-machines                List installed machines
+  up <VM>                 Boot up a vm
+  halt <VM>               Perform a graceful shutdown of a vm
+  destroy <VM>            Stop a vm unconditionally
+  status <VM>             Display status of a vm
+  ssh <VM> [ARGS]         SSH to vm with optional ARGS
+  purge <VM>              Delete vm at the filesystem level
+  list-vms                List installed vms
   list-boxes                   List available boxes
   add <SPEC>                   Add a spec to the config file
   remove <SPEC>                Remove a spec from the config file
   link <DIRECTORY> <NAME>      Create a box entry for <DIRECTORY> under name <NAME>
-  edit <MACHINE>               Edit the configuration file for <MACHINE>
+  edit <VM>               Edit the configuration file for <VM>
   <COMMAND> [ARGS]             Pass command and optional args to Vagrant
 EOF
   exit 0
 }
 
-check_binaries () {
-  debug check_binaries "${@}"
+function check_binaries () {
+  debug ${FUNCNAME[0]} "$@"
 
   for program in vagrant VirtualBox pgrep; do
     if ! type -P "${program}" > /dev/null; then
@@ -137,8 +140,8 @@ check_binaries () {
   done
 }
 
-check_vagrantfile () {
-  debug check_vagrantfile "${@}"
+function check_vagrantfile () {
+  debug ${FUNCNAME[0]} "$@"
 
   if [[ -f "${PWD}/Vagrantfile" ]]; then
     return 0
@@ -147,28 +150,28 @@ check_vagrantfile () {
   fi
 }
 
-purge_machine_single () {
-  debug purge_machine "${@}"
+function purge_vm_single () {
+  debug ${FUNCNAME[0]} "$@"
 
-  local machine="${1}"
+  local vm="$1"
   local input=""
 
-  echo -n "Are you sure want to purge the machine ${machine}? "
+  echo -n "Are you sure want to purge the vm ${vm}? "
   read -p "[y/N] " input
 
   if [[ "${input}" == "y" || "${input}" == "Y" ]]; then
-    rm -rvf "${BASE_DIR}/${machine}"
+    rm -rvf "${BASE_DIR}/${vm}"
   else
     return 1
   fi
 }
 
-purge_machines () {
-  debug purge_machines "${@}"
+function purge_vms () {
+  debug ${FUNCNAME[0]} "$@"
 
   local input="NO"
 
-  echo -e "Are you sure want to purge all the following machines:\n"
+  echo -e "Are you sure want to purge all the following vms:\n"
   echo $(ls "${BASE_DIR}")
   echo -en "\nPlease type all uppercase YES to proceed: "
   read input
@@ -180,35 +183,35 @@ purge_machines () {
   fi
 }
 
-purge_machine () {
-  debug purge_machine "${@}"
+function purge_vm () {
+  debug ${FUNCNAME[0]} "$@"
 
   if [[ "${#}" == 0 ]]; then
-    purge_machines
+    purge_vms
   else
-    purge_machine_single $1
+    purge_vm_single $1
   fi
 }
 
-kill_provider () {
-  debug kill_provider "${@}"
+function kill_provider () {
+  debug ${FUNCNAME[0]} "$@"
 
   if [[ "${#}" == 1 ]]; then
-    pkill "${1}"
+    pkill "$1"
   else
     pkill -9 "${OPT_PROVIDER}"
   fi
 }
 
-list_machines () {
-  debug list_machines "${@}"
+function list_vms () {
+  debug ${FUNCNAME[0]} "$@"
 
   [[ ! -d "${BASE_DIR}" ]] && mkdir -p "${BASE_DIR}"
   [[ -d "${BASE_DIR}" ]] && ls -1 "${BASE_DIR}"
 }
 
-list_boxes () {
-  debug list_boxes "${@}"
+function list_boxes () {
+  debug ${FUNCNAME[0]} "$@"
 
   for file in "${SYSTEM_CONFIG}" "${USER_CONFIG}"; do
     if [[ -f "${file}" ]]; then
@@ -217,51 +220,54 @@ list_boxes () {
   done
 }
 
-is_machine_installed () {
-  debug is_machine_installed "${@}"
+function is_vm_installed () {
+  debug ${FUNCNAME[0]} "$@"
 
-  local machine="${1}"
+  local vm="$1"
 
-  if [[ -f "${BASE_DIR}/${machine}/Vagrantfile" ]]; then
+  if [[ -f "${BASE_DIR}/${vm}/Vagrantfile" ]]; then
     return 0
   else
     return 1
   fi
 }
 
-is_box_available () {
-  debug is_box_available "${@}"
+function is_box_available () {
+  debug ${FUNCNAME[0]} "$@"
 
-  local machine="${1}"
+  local vm="$1"
 
-  if list_boxes | grep -q "${machine}"; then
-    return 0
-  else
-    return 1
-  fi
+  list_boxes | grep -q "${vm}"
 }
 
-box_name () {
-  debug box_name "${@}"
+function is_virtualbox_box_available () {
+  debug ${FUNCNAME[0]} "$@"
 
-  local machine="${1}"
+  VBoxManage list vms | grep -q "^\"$1\"\ "
+}
+
+
+function box_name () {
+  debug ${FUNCNAME[0]} "$@"
+
+  local vm="$1"
 
   read_config
 
-  if is_box_available "${machine}"; then
-    echo $(eval "echo \$${machine}")
-  elif is_machine_installed "${machine}"; then
-    echo "${machine}"
+  if is_box_available "${vm}"; then
+    echo $(eval "echo \$${vm}")
+  elif is_vm_installed "${vm}"; then
+    echo "${vm}"
   else
     echo ""
   fi
 }
 
-spec_exists () {
-  debug spec_exists "${@}"
+function spec_exists () {
+  debug ${FUNCNAME[0]} "$@"
 
-  local spec="${1}"
-  local file="${2}"
+  local spec="$1"
+  local file="$2"
 
   if [[ -f "${file}" ]]; then
     if grep -q "${spec}" "${file}"; then
@@ -272,11 +278,11 @@ spec_exists () {
   fi
 }
 
-add_machine () {
-  debug add_machine "${@}"
+function add_vm () {
+  debug ${FUNCNAME[0]} "$@"
 
-  local spec="${1}"
-  local file="${2}"
+  local spec="$1"
+  local file="$2"
 
   if ! spec_exists "${spec}" "${file}"; then
     echo "${spec}" >> "${file}"
@@ -285,11 +291,11 @@ add_machine () {
   fi
 }
 
-remove_machine () {
-  debug remove_machine "${@}"
+function remove_vm () {
+  debug ${FUNCNAME[0]} "$@"
 
-  local spec="${1}"
-  local file="${2}"
+  local spec="$1"
+  local file="$2"
   local temp=$(mktemp)
 
   if spec_exists "${spec}" "${file}"; then
@@ -299,38 +305,38 @@ remove_machine () {
   fi
 }
 
-ensure_base_directory () {
-  debug ensure_base_directory "${@}"
+function ensure_base_directory () {
+  debug ${FUNCNAME[0]} "$@"
 
   if [[ ! -d "${BASE_DIR}" ]]; then
     mkdir -p "${BASE_DIR}"
   fi
 }
 
-ensure_machine_directory () {
-  debug ensure_machine_directory "${@}"
+function ensure_vm_directory () {
+  debug ${FUNCNAME[0]} "$@"
 
-  local machine="${1}"
+  local vm="$1"
 
   ensure_base_directory
 
-  if [[ ! -d "${BASE_DIR}/${machine}" ]]; then
-    mkdir -p "${BASE_DIR}/${machine}" > /dev/null 2>&1
+  if [[ ! -d "${BASE_DIR}/${vm}" ]]; then
+    mkdir -p "${BASE_DIR}/${vm}" > /dev/null 2>&1
   fi
 }
 
-initialize_box () {
-  debug initialize_box "${@}"
+function initialize_box () {
+  debug ${FUNCNAME[0]} "$@"
 
-  local box="${1}"
+  local box="$1"
 
   if ! check_vagrantfile; then
     vagrant init "${box}"
   fi
 }
 
-make_config () {
-  debug make_config "${@}"
+function make_config () {
+  debug ${FUNCNAME[0]} "$@"
 
   if [[ -e "${USER_CONFIG}" ]]; then
     error "An existing RC file is found. Skipping file creation."
@@ -344,18 +350,18 @@ EOF
   fi
 }
 
-ensure_config () {
+function ensure_config () {
   if [[ ! -f "${SYSTEM_CONFIG}" && ! -f "${USER_CONFIG}" ]]; then
     make_config
   fi
 }
 
-create_link () {
-  debug create_link "${@}"
+function create_link () {
+  debug ${FUNCNAME[0]} "$@"
 
   if [[ "${#}" -eq 2 ]]; then
-    local source="${1}"
-    local name="${2}"
+    local source="$1"
+    local name="$2"
 
     [[ -h "${BASE_DIR}/${name}" ]] && rm -f "${BASE_DIR}/${name}"
 
@@ -371,107 +377,124 @@ create_link () {
   fi
 }
 
-edit_config () {
-  debug edit_config "${@}"
+function edit_config () {
+  debug ${FUNCNAME[0]} "$@"
 
-  local machine="${1}"
-  local config="${BASE_DIR}/${machine}/Vagrantfile"
+  local vm="$1"
+  local config="${BASE_DIR}/${vm}/Vagrantfile"
 
   [[ -f "${config}" ]] && $EDITOR "${config}"
 }
 
-internal_command () {
-  debug internal_command "${@}"
+function internal_command () {
+  debug ${FUNCNAME[0]} "$@"
 
-  local op="${1}"
+  local op="$1"
   shift
 
   case "${op}" in
-    (add) add_machine "${1}" "${USER_CONFIG}" ;;
-    (remove) remove_machine "${1}" "${USER_CONFIG}" ;;
-    (purge) purge_machine "${@}" ;;
-    (kill|kill-provider) kill_provider "${@}" ;;
-    (list-machines|ls) list_machines ;;
-    (list-boxes|lsb) list_boxes ;;
-    (link) create_link "${@}" ;;
-    (edit) edit_config "${@}" ;;
-    (*) return 0 ;;
+    add) add_vm "$1" "${USER_CONFIG}" ;;
+    remove) remove_vm "$1" "${USER_CONFIG}" ;;
+    purge) purge_vm "$@" ;;
+    kill|kill-provider) kill_provider "$@" ;;
+    list-vms|ls) list_vms ;;
+    list-boxes|lsb) list_boxes ;;
+    link) create_link "$@" ;;
+    edit) edit_config "$@" ;;
+    *) return 0 ;;
   esac
 
   exit $?
 }
 
-control_machine () {
-  debug control_machine "${@}"
+function control_vm () {
+  debug ${FUNCNAME[0]} "$@"
 
-  local op="${1}"
+  local op="$1"
   shift
 
   case "${op}" in
-    (ssh) vagrant ssh -- "${@}";;
-    (*) vagrant "${op}" "${@}" ;;
+    ssh) vagrant ssh -- "$@";;
+    *) vagrant "${op}" "$@" ;;
   esac
 }
 
-run_machine () {
-  debug run_machine "${@}"
+function load_vm () {
+  debug ${FUNCNAME[0]} "$@"
 
-  local opts=$(getopt -n "run_machine" --options i --longoptions initialize -- "${@}")
+  local opts=$(getopt -n "load_vm" --options i --longoptions initialize -- "$@")
   local opt_initialize=
 
   eval set -- "${opts}"
 
   while true; do
-    case "${1}" in
-      (-i|--initialize) opt_initialize=true; shift  ;;
-      (--) shift; break ;;
-      (*) break ;;
+    case "$1" in
+      -i|--initialize) opt_initialize=true; shift  ;;
+      --) shift; break ;;
+      *) break ;;
     esac
   done
 
-  local box="${1}"
+  local box="$1"
 
   [[ -n "${opt_initialize}" ]] && initialize_box "${box}"
   shift
-  control_machine "${@}"
+  control_vm "$@"
 }
 
-vagrant_command () {
-  debug vagrant_command "${@}"
+function vagrant_command () {
+  debug ${FUNCNAME[0]} "$@"
 
-  case "${1}" in
-    (init|up|destroy|halt|reload|ssh|ssh-config|resume|share|status)
-    local op="${1}"
-    local machine="${2}"
-    local box=$(box_name $machine)
-    shift 2
+  local op=
+  local vm=
+  local box=
 
-    if [[ "${box}" == "${machine}" ]]; then
-      cd "${BASE_DIR}/${machine}"
-      run_machine "${box}" "${op}" "${@}"
-    elif [[ -z "${box}" ]]; then
-      error "The machine ${machine} is not defined. Please add a definition in your configuration."
-    else
-      ensure_machine_directory "${machine}"
-      cd "${BASE_DIR}/${machine}"
-      run_machine --initialize -- "${box}" "${op}" "${@}"
-    fi
-    ;;
-    (*) vagrant "${@}" ;;
+  case "${OPT_MODE}" in
+    vagrant)
+      case "$1" in
+        init|up|destroy|halt|reload|ssh|ssh-config|resume|share|status)
+          op="$1"
+          vm="$2"
+          box=$(box_name $vm)
+          shift 2
+
+          if [[ "${box}" == "${vm}" ]]; then
+            cd "${BASE_DIR}/${vm}"
+            load_vm "${box}" "${op}" "$@"
+            # elif is_virtualbox_box_available "$1"; then
+            #   VBoxManage startvm --type headless "$1"
+          elif [[ -z "${box}" ]]; then
+            error "The vm ${vm} is not defined. Please add a definition in your configuration."
+          else
+            ensure_vm_directory "${vm}"
+            cd "${BASE_DIR}/${vm}"
+            load_vm --initialize -- "${box}" "${op}" "$@"
+          fi
+          ;;
+        *) vagrant "$@" ;;
+      esac
+      ;;
+    vboxmanage|vbm)
+      echo $@
+      ;;
+    *)
+      error error
+      return 1
+      ;;
   esac
 }
 
-main () {
-  debug main "${@}"
+function main () {
+  debug ${FUNCNAME[0]} "$@"
 
-  parse_arguments "${@}"
-  process_arguments "${@}"
+  parse_arguments "$@"
+  process_arguments "$@"
   check_binaries
 
   ensure_config
 
-  internal_command "${@}"
-  vagrant_command "${@}"
+  internal_command "$@"
+  vagrant_command "$@"
 }
 
-main "${@}"
+main "$@"
