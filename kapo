@@ -120,12 +120,12 @@ COMMANDS:
   ssh <VM> [ARGS]         SSH to vm with optional ARGS
   purge <VM>              Delete vm at the filesystem level
   list-vms                List installed vms
-  list-boxes                   List available boxes
-  add <SPEC>                   Add a spec to the config file
-  remove <SPEC>                Remove a spec from the config file
-  link <DIRECTORY> <NAME>      Create a box entry for <DIRECTORY> under name <NAME>
+  list-boxes              List available boxes
+  add <SPEC>              Add a spec to the config file
+  remove <SPEC>           Remove a spec from the config file
+  link <DIRECTORY> <NAME> Create a box entry for <DIRECTORY> under name <NAME>
   edit <VM>               Edit the configuration file for <VM>
-  <COMMAND> [ARGS]             Pass command and optional args to Vagrant
+  <COMMAND> [ARGS]        Pass command and optional args to Vagrant
 EOF
   exit 0
 }
@@ -342,9 +342,9 @@ function make_config () {
     error "An existing RC file is found. Skipping file creation."
   else
     cat > "${USER_CONFIG}" << EOF
-ubuntu=ubuntu/bionic64
+ubuntu=ubuntu/focal64
 debian=debian/jessie64
-fedora=generic/fedora28
+fedora=fedora/32-cloud-base
 EOF
 
   fi
